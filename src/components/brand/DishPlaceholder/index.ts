@@ -1,0 +1,1 @@
+export { DishPlaceholder } from './DishPlaceholder';

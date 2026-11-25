@@ -1,0 +1,446 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clay);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+}
+
+.sub {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.warningBox {
+  background: var(--turmeric-wash);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-inner);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--text-sm);
+}
+
+/* Day Grid */
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--sp-4);
+}
+
+.dayCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-tile);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.dayCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.dayCardHead a {
+  text-decoration: none;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.dayCardHead a:hover {
+  color: var(--clay);
+}
+
+.dayCost {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.slotBtn {
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.slotBtn:hover {
+  border-color: var(--clay);
+}
+
+.slotType {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: block;
+}
+
+.slotName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.slotPrice {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+
+/* Recipe Drawer */
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.drawerMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.costHero {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-inner);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.bigPrice {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.perPerson {
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.subHeading {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.ingTable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.ingRow {
+  padding: var(--sp-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.ingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 170px;
+  flex: 1;
+}
+
+.ingQty {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+
+.ingPriceCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.ingCost {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.ingBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editPriceBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--clay);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.editPriceBtn:hover {
+  background: var(--clay-wash);
+}
+
+.inlineEdit {
+  width: 100%;
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.inlineLabel {
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.inlineActions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.stepsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.stepsList {
+  padding-left: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  line-height: 1.6;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.tipBox {
+  background: var(--moss-wash);
+  color: var(--ink);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-inner);
+  font-size: var(--text-xs);
+}
+
+.disclaimers {
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Swap dialog */
+.swapList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.swapCard {
+  padding: var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-inner);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.swapInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swapInfo span {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+
+.swapBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.errorText {
+  color: var(--tamarind);
+  font-size: var(--text-sm);
+}
+
+.mutedText {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+/* Saved plans grid */
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: var(--sp-4);
+}
+
+.savedCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-tile);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.savedCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
+.savedCardTitle {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+/* Day View */
+.mealCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-4);
+}
+
+.mealCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-tile);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.mealCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mealCardTitle {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+
+.mealCardPrice {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.mealCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: auto;
+}
+
+.dayNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dayPill {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 4px 12px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.dayPillActive {
+  background: var(--clay);
+  color: var(--on-clay);
+  border-color: transparent;
+}

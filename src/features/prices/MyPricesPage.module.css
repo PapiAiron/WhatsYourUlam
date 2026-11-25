@@ -1,0 +1,117 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clay);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+}
+
+.sub {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  max-width: 640px;
+}
+
+.searchWrap {
+  position: relative;
+  max-width: 440px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+}
+
+.searchInput {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 14px 8px 40px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.row {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-inner);
+  padding: var(--sp-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  flex: 1;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}
+
+.priceCol {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.price {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+}
+
+.editBox {
+  width: 100%;
+  padding-top: var(--sp-3);
+  border-top: 1px dashed var(--line-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}

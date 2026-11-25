@@ -1,0 +1,241 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile, preferences, and monthly plan quota.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "country": { "type": "string", "enum": ["PH", "MY", "JP", "US"] },
+        "region": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "currency": { "type": "string", "enum": ["PHP", "MYR", "JPY", "USD"] },
+        "locale": { "type": "string", "enum": ["en", "fil"] },
+        "unitSystem": { "type": "string", "enum": ["metric", "imperial"] },
+        "onboardingComplete": { "type": "boolean" },
+        "defaults": { "type": "object" },
+        "quota": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "country", "region", "currency", "locale", "unitSystem", "onboardingComplete", "createdAt", "updatedAt"]
+    },
+    "PlanDocument": {
+      "title": "PlanDocument",
+      "description": "A household meal plan with budget summary and generation status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "status": { "type": "string", "enum": ["queued", "generating", "ready", "failed"] },
+        "progress": { "type": "object" },
+        "input": { "type": "object" },
+        "summary": { "type": "object" },
+        "warnings": { "type": "array" },
+        "isSaved": { "type": "boolean" },
+        "shareId": { "type": "string", "maxLength": 64 },
+        "engineVersion": { "type": "string", "maxLength": 24 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "name", "status", "input", "summary", "isSaved", "createdAt", "updatedAt"]
+    },
+    "PlannedMeal": {
+      "title": "PlannedMeal",
+      "description": "A single scheduled meal within a meal plan with per-ingredient costs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "day": { "type": "integer" },
+        "mealType": { "type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"] },
+        "recipeId": { "type": "string", "maxLength": 128 },
+        "recipeSnapshot": { "type": "object" },
+        "servings": { "type": "integer" },
+        "ingredients": { "type": "array" },
+        "costMinor": { "type": "integer" },
+        "kcalPerPerson": { "type": "integer" },
+        "proteinGPerPerson": { "type": "integer" },
+        "swapped": { "type": "boolean" },
+        "cooked": { "type": "boolean" }
+      },
+      "required": ["id", "day", "mealType", "recipeId", "servings", "costMinor", "swapped", "cooked"]
+    },
+    "GroceryItem": {
+      "title": "GroceryItem",
+      "description": "A pack-rounded grocery line item grouped by trip and aisle.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "ingredientId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 30 },
+        "trip": { "type": "integer" },
+        "neededQty": { "type": "number" },
+        "unit": { "type": "string", "enum": ["g", "ml", "pc"] },
+        "packLabel": { "type": "string", "maxLength": 60 },
+        "packSize": { "type": "number" },
+        "packsToBuy": { "type": "integer" },
+        "packPriceMinor": { "type": "integer" },
+        "lineTotalMinor": { "type": "integer" },
+        "leftoverQty": { "type": "number" },
+        "purchased": { "type": "boolean" },
+        "purchasedAt": { "type": "string" },
+        "actualPaidMinor": { "type": "integer" },
+        "priceSource": { "type": "string", "maxLength": 24 }
+      },
+      "required": ["id", "ingredientId", "name", "trip", "packsToBuy", "lineTotalMinor", "purchased"]
+    },
+    "PriceOverride": {
+      "title": "PriceOverride",
+      "description": "User local market price override for an ingredient.",
+      "type": "object",
+      "properties": {
+        "ingredientId": { "type": "string", "maxLength": 128 },
+        "packPriceMinor": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ingredientId", "packPriceMinor", "updatedAt"]
+    },
+    "ShareSnapshot": {
+      "title": "ShareSnapshot",
+      "description": "Publicly accessible read-only sanitized plan snapshot with zero PII.",
+      "type": "object",
+      "properties": {
+        "shareId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 64 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "planName": { "type": "string", "maxLength": 100 },
+        "summary": { "type": "object" },
+        "meals": { "type": "array" },
+        "grocery": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["shareId", "ownerUid", "planName", "summary", "meals", "grocery", "createdAt"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "Shared recipe catalog item with derived allergens and nutrition.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "localName": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "enum": ["PH", "MY", "JP", "US"] },
+        "status": { "type": "string", "enum": ["approved", "unreviewed", "rejected"] }
+      },
+      "required": ["id", "name", "country", "status"]
+    },
+    "PriceEntry": {
+      "title": "PriceEntry",
+      "description": "Market price entry for a country and region.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "country": { "type": "string", "enum": ["PH", "MY", "JP", "US"] },
+        "region": { "type": "string", "maxLength": 60 },
+        "ingredientId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "country", "region", "ingredientId"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Admin-approved user testimonial displayed on the landing page.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "author": { "type": "string", "maxLength": 80 },
+        "context": { "type": "string", "maxLength": 80 },
+        "quote": { "type": "string", "maxLength": 360 },
+        "approved": { "type": "boolean" }
+      },
+      "required": ["id", "author", "quote", "approved"]
+    },
+    "FeedbackEntry": {
+      "title": "FeedbackEntry",
+      "description": "Contact or feedback message submitted by a visitor or user.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "email": { "type": "string", "format": "email", "maxLength": 120 },
+        "topic": { "type": "string", "enum": ["pricing", "recipe", "bug", "feature", "general"] },
+        "message": { "type": "string", "minLength": 10, "maxLength": 1200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "topic", "message", "createdAt"]
+    },
+    "WaitlistEntry": {
+      "title": "WaitlistEntry",
+      "description": "Country expansion waitlist request.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "maxLength": 120 },
+        "country": { "type": "string", "enum": ["PH", "MY", "JP", "US"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "country", "createdAt"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Global application configuration and feature flags.",
+      "type": "object",
+      "properties": {
+        "maintenanceMode": { "type": "boolean" },
+        "aiDailySpendCapUsd": { "type": "number" },
+        "recipeLibraryVersion": { "type": "integer" }
+      },
+      "required": ["maintenanceMode", "aiDailySpendCapUsd", "recipeLibraryVersion"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile, settings, and quota."
+    },
+    "/users/{uid}/plans/{planId}": {
+      "schema": { "$ref": "#/entities/PlanDocument" },
+      "description": "Meal plans belonging to the user."
+    },
+    "/users/{uid}/plans/{planId}/meals/{mealId}": {
+      "schema": { "$ref": "#/entities/PlannedMeal" },
+      "description": "Daily meals belonging to a user's meal plan."
+    },
+    "/users/{uid}/plans/{planId}/grocery/{itemId}": {
+      "schema": { "$ref": "#/entities/GroceryItem" },
+      "description": "Consolidated grocery items for a meal plan."
+    },
+    "/users/{uid}/priceOverrides/{ingredientId}": {
+      "schema": { "$ref": "#/entities/PriceOverride" },
+      "description": "User's local price overrides."
+    },
+    "/recipes/{recipeId}": {
+      "schema": { "$ref": "#/entities/Recipe" },
+      "description": "Global recipe library."
+    },
+    "/prices/{priceId}": {
+      "schema": { "$ref": "#/entities/PriceEntry" },
+      "description": "Regional price book entries."
+    },
+    "/shares/{shareId}": {
+      "schema": { "$ref": "#/entities/ShareSnapshot" },
+      "description": "Public read-only plan snapshots."
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/Testimonial" },
+      "description": "Approved user testimonials."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/FeedbackEntry" },
+      "description": "Visitor and user feedback submissions."
+    },
+    "/waitlist/{waitlistId}": {
+      "schema": { "$ref": "#/entities/WaitlistEntry" },
+      "description": "Country expansion waitlist entries."
+    },
+    "/config/{docId}": {
+      "schema": { "$ref": "#/entities/AppConfig" },
+      "description": "Application configuration and flags."
+    }
+  }
+}

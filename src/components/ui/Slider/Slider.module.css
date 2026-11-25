@@ -1,0 +1,45 @@
+.root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  touch-action: none;
+  width: 100%;
+  height: 36px;
+}
+
+.track {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  position: relative;
+  flex-grow: 1;
+  border-radius: var(--r-chip);
+  height: 10px;
+}
+
+.range {
+  position: absolute;
+  background: var(--clay);
+  border-radius: var(--r-chip);
+  height: 100%;
+}
+
+.thumb {
+  display: block;
+  width: 26px;
+  height: 26px;
+  background: var(--card);
+  border: 3px solid var(--clay);
+  border-radius: 50%;
+  box-shadow: var(--shadow-hover);
+  cursor: grab;
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+
+.thumb:hover {
+  transform: scale(1.08);
+}
+
+.thumb:active {
+  cursor: grabbing;
+}

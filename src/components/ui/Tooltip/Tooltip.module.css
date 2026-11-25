@@ -1,0 +1,14 @@
+.content {
+  background: var(--ink-tile);
+  color: var(--on-ink-tile);
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: var(--text-xs);
+  max-width: 240px;
+  z-index: 75;
+  box-shadow: var(--shadow-hover);
+}
+
+.arrow {
+  fill: var(--ink-tile);
+}

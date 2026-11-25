@@ -1,0 +1,45 @@
+{
+  "brand": {
+    "name": "What's you ulam",
+    "tagline": "Sabihin ang badyet mo. Kami ang magpaplano ng pagkain."
+  },
+  "nav": {
+    "howItWorks": "Paano gumagana",
+    "samplePlans": "Mga halimbawa",
+    "markets": "Mga pamilihan",
+    "faq": "Mga tanong",
+    "logIn": "Mag-log in",
+    "getStarted": "Magsimula",
+    "overview": "Buod",
+    "newPlan": "Bagong plano",
+    "savedPlans": "Mga naka-save",
+    "recipes": "Mga resipe",
+    "prices": "Aking presyo",
+    "settings": "Mga setting",
+    "admin": "Admin"
+  },
+  "landing": {
+    "heroEyebrow": "Pagpaplano ng pagkaing ayon sa badyet · Pilipinas (PHP)",
+    "heroTitle": "Sabihin ang badyet mo. Kami ang magpaplano ng pagkain.",
+    "heroSubtitle": "Presyong palengke at supermarket, iwas-tapon na sangkap, at lutong-bahay na resipe na pasok sa iyong badyet.",
+    "heroCta": "Magplano ng pagkain",
+    "heroDemoCta": "Tingnan ang 3D kusina",
+    "budgetLabel": "Kabuuang badyet",
+    "peopleLabel": "Bilang ng kakain",
+    "daysLabel": "Bilang ng araw"
+  },
+  "common": {
+    "loading": "Naglo-load...",
+    "save": "I-save",
+    "cancel": "Kanselahin",
+    "delete": "Tanggalin",
+    "undo": "Ibalik",
+    "print": "I-print",
+    "share": "Ibahagi",
+    "back": "Bumalik",
+    "next": "Susunod",
+    "estimateBadge": "Tantiya",
+    "userPriceBadge": "Presyo mo",
+    "pantryNote": "Nasa kusina na (₱0)"
+  }
+}

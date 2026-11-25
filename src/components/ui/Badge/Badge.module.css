@@ -1,0 +1,39 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--r-chip);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.neutral {
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+
+.moss {
+  background: var(--moss-wash);
+  color: var(--moss);
+}
+
+.clay {
+  background: var(--clay-wash);
+  color: var(--clay);
+}
+
+.turmeric {
+  background: var(--turmeric-wash);
+  color: var(--turmeric);
+}
+
+.tamarind {
+  background: var(--tamarind-wash);
+  color: var(--tamarind);
+}

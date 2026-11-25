@@ -1,0 +1,43 @@
+.banner {
+  position: fixed;
+  bottom: var(--sp-4);
+  left: var(--sp-4);
+  right: var(--sp-4);
+  max-width: 780px;
+  margin-inline: auto;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-tile);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-hover);
+  z-index: 55;
+}
+
+.text {
+  flex: 1;
+  min-width: 240px;
+  font-size: var(--text-sm);
+}
+
+.text p {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  margin-top: 2px;
+}
+
+.link {
+  color: var(--clay);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}

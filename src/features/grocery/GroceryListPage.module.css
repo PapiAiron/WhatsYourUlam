@@ -1,0 +1,247 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.backLink {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clay);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+}
+
+.sub {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.statBig {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tripTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.tripBtn {
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tripBtnActive {
+  background: var(--clay);
+  color: var(--on-clay);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.tripsStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.tripSection {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-tile);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.tripHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.tripTitle {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+}
+
+.tripCost {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+}
+
+.aisleList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.aisleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.aisleHeading {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--moss);
+  margin-bottom: var(--sp-2);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.itemRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.itemPurchased {
+  opacity: 0.65;
+}
+
+.itemPurchased .itemName {
+  text-decoration: line-through;
+}
+
+.checkBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid var(--line-strong);
+  background: var(--card);
+  color: var(--on-moss);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.itemPurchased .checkBtn {
+  background: var(--moss);
+  border-color: var(--moss);
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.itemMeta {
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.leftoverNote {
+  color: var(--moss);
+  font-weight: 500;
+}
+
+.usedIn {
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+.itemRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.linePrice {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.logPaidBtn {
+  font-size: 0.72rem;
+  color: var(--clay);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.paidBox {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--line-strong);
+}
+
+@media print {
+  .tripSection {
+    border: 1px solid #000;
+    break-inside: avoid;
+  }
+
+  .itemRow {
+    border-color: #999;
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "brand": {
+    "name": "What's you ulam",
+    "tagline": "Tell us your budget. We'll plan your meals."
+  },
+  "nav": {
+    "howItWorks": "How it works",
+    "samplePlans": "Sample plans",
+    "markets": "Markets",
+    "faq": "FAQ",
+    "logIn": "Log in",
+    "getStarted": "Get started",
+    "overview": "Overview",
+    "newPlan": "New plan",
+    "savedPlans": "Saved plans",
+    "recipes": "Recipes",
+    "prices": "My prices",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "landing": {
+    "heroEyebrow": "Budget-first meal planning · Live in Philippines (PHP)",
+    "heroTitle": "Tell us your budget. We'll plan your meals.",
+    "heroSubtitle": "Real pack prices from local palengke and supermarkets, zero wasted leftovers, and step-by-step Filipino home recipes built to fit your peso target.",
+    "heroCta": "Plan my meals",
+    "heroDemoCta": "Explore 3D kitchen",
+    "budgetLabel": "Total food budget",
+    "peopleLabel": "People eating",
+    "daysLabel": "Days to plan"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "undo": "Undo",
+    "print": "Print list",
+    "share": "Share",
+    "back": "Back",
+    "next": "Next",
+    "estimateBadge": "Estimate",
+    "userPriceBadge": "Your price",
+    "pantryNote": "Already in pantry (₱0)"
+  }
+}

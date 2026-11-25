@@ -1,0 +1,28 @@
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--paper-2) 0%,
+    var(--card) 50%,
+    var(--paper-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerWarm 1.8s infinite;
+}
+
+.line {
+  height: 16px;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.tile {
+  height: 160px;
+  border-radius: var(--r-tile);
+  width: 100%;
+}
+
+.circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}

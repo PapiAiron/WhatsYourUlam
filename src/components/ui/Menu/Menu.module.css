@@ -1,0 +1,37 @@
+.content {
+  min-width: 196px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-inner);
+  padding: 6px;
+  box-shadow: var(--shadow-hover);
+  z-index: 70;
+}
+
+.item,
+.itemDanger {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  outline: none;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--paper-2);
+}
+
+.itemDanger {
+  color: var(--tamarind);
+}
+
+.itemDanger:hover,
+.itemDanger:focus-visible {
+  background: var(--tamarind-wash);
+}

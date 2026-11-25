@@ -1,0 +1,54 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  padding: 3px;
+  gap: var(--sp-2);
+}
+
+.btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  background: var(--paper-2);
+  cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--clay-wash);
+  color: var(--clay);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.readout {
+  min-width: 68px;
+  text-align: center;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  padding-inline: var(--sp-2);
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+}

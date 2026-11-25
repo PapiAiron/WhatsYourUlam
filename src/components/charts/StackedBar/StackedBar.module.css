@@ -1,0 +1,52 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.bar {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  border-radius: var(--r-chip);
+  overflow: hidden;
+  background: var(--paper-2);
+  gap: 2px;
+}
+
+.seg {
+  width: var(--seg-w, 0%);
+  height: 100%;
+  transition: width 300ms var(--ease-out);
+}
+
+.clay { background: var(--clay); }
+.moss { background: var(--moss); }
+.turmeric { background: var(--turmeric-fill); }
+.tamarind { background: var(--tamarind); }
+.ink { background: var(--ink-3); }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.pct {
+  font-family: var(--font-mono);
+  color: var(--ink-3);
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What's you ulam — Tell us your budget. We'll plan your meals.</title>
+    <meta
+      name="description"
+      content="Budget-first meal planning for real households. Daily meals with recipes, per-ingredient cost breakdowns, and pack-aware grocery lists priced at your local market."
+    />
+    <meta property="og:title" content="What's you ulam — Tell us your budget. We'll plan your meals." />
+    <meta
+      property="og:description"
+      content="Budget-first meal planning for real households. Daily meals with recipes, per-ingredient cost breakdowns, and pack-aware grocery lists priced at your local market."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#F7F1E5" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('smp_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = stored === 'dark' || stored === 'light' ? stored : (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', theme === 'dark' ? '#1B1612' : '#F7F1E5');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

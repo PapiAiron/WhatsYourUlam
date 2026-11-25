@@ -1,0 +1,17 @@
+{
+  "name": "What's you ulam",
+  "short_name": "What's you ulam",
+  "description": "Tell us your budget. We'll plan your meals.",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#F7F1E5",
+  "theme_color": "#A8481F",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

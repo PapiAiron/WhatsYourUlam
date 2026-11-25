@@ -1,0 +1,68 @@
+.wrap {
+  position: relative;
+  width: var(--ring-size, 128px);
+  height: var(--ring-size, 128px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 9;
+}
+
+.fill {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 450ms var(--ease-out);
+}
+
+.moss .fill {
+  stroke: var(--moss);
+}
+
+.clay .fill {
+  stroke: var(--clay);
+}
+
+.turmeric .fill {
+  stroke: var(--turmeric-fill);
+}
+
+.tamarind .fill {
+  stroke: var(--tamarind);
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.sub {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}

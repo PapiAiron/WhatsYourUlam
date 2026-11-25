@@ -1,0 +1,321 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isVerified() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'mcantal22@gmail.com' ||
+        request.auth.token.email == 'cantal2227@gmail.com'
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'email', 'country', 'region', 'currency',
+          'locale', 'unitSystem', 'onboardingComplete', 'defaults', 'quota', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'photoURL', 'country', 'region', 'currency',
+          'locale', 'unitSystem', 'onboardingComplete', 'defaults', 'quota', 'createdAt', 'updatedAt'
+        ])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 512))
+        && data.country in ['PH', 'MY', 'JP', 'US']
+        && data.region is string && data.region.size() >= 1 && data.region.size() <= 60
+        && data.currency in ['PHP', 'MYR', 'JPY', 'USD']
+        && data.locale in ['en', 'fil']
+        && data.unitSystem in ['metric', 'imperial']
+        && data.onboardingComplete is bool
+        && data.defaults is map
+        && data.quota is map;
+    }
+
+    function isValidPlan(data) {
+      return data.keys().hasAll([
+          'id', 'uid', 'name', 'status', 'progress', 'input', 'summary',
+          'warnings', 'isSaved', 'createdAt', 'updatedAt', 'engineVersion'
+        ])
+        && data.keys().hasOnly([
+          'id', 'uid', 'name', 'status', 'progress', 'input', 'summary',
+          'warnings', 'isSaved', 'shareId', 'createdAt', 'updatedAt', 'engineVersion'
+        ])
+        && isValidId(data.id)
+        && data.uid is string && data.uid == request.auth.uid
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.status in ['queued', 'generating', 'ready', 'failed']
+        && data.progress is map
+        && data.input is map
+        && data.summary is map
+        && data.warnings is list && data.warnings.size() <= 20
+        && data.isSaved is bool
+        && (!('shareId' in data) || data.shareId == null || (data.shareId is string && data.shareId.size() <= 64))
+        && data.engineVersion is string && data.engineVersion.size() <= 24;
+    }
+
+    function isValidMeal(data) {
+      return data.keys().hasAll([
+          'id', 'day', 'mealType', 'recipeId', 'recipeSnapshot',
+          'servings', 'ingredients', 'costMinor', 'kcalPerPerson',
+          'proteinGPerPerson', 'swapped', 'cooked'
+        ])
+        && data.keys().hasOnly([
+          'id', 'day', 'mealType', 'recipeId', 'recipeSnapshot',
+          'servings', 'ingredients', 'costMinor', 'kcalPerPerson',
+          'proteinGPerPerson', 'swapped', 'cooked'
+        ])
+        && isValidId(data.id)
+        && data.day is int && data.day >= 1 && data.day <= 31
+        && data.mealType in ['breakfast', 'lunch', 'dinner', 'snack']
+        && isValidId(data.recipeId)
+        && data.recipeSnapshot is map
+        && data.servings is int && data.servings >= 1 && data.servings <= 20
+        && data.ingredients is list && data.ingredients.size() <= 30
+        && data.costMinor is int && data.costMinor >= 0
+        && data.kcalPerPerson is int && data.kcalPerPerson >= 0
+        && data.proteinGPerPerson is int && data.proteinGPerPerson >= 0
+        && data.swapped is bool
+        && data.cooked is bool;
+    }
+
+    function isValidGroceryItem(data) {
+      return data.keys().hasAll([
+          'id', 'ingredientId', 'name', 'category', 'trip',
+          'tripDayStart', 'tripDayEnd', 'neededQty', 'unit',
+          'packLabel', 'packSize', 'packsToBuy', 'packPriceMinor',
+          'lineTotalMinor', 'leftoverQty', 'purchased', 'priceSource', 'usedIn'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ingredientId', 'name', 'category', 'trip',
+          'tripDayStart', 'tripDayEnd', 'neededQty', 'unit',
+          'packLabel', 'packSize', 'packsToBuy', 'packPriceMinor',
+          'lineTotalMinor', 'leftoverQty', 'purchased', 'purchasedAt',
+          'actualPaidMinor', 'priceSource', 'usedIn'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ingredientId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.category is string && data.category.size() <= 30
+        && data.trip is int && data.trip >= 1 && data.trip <= 31
+        && data.unit in ['g', 'ml', 'pc']
+        && data.packLabel is string && data.packLabel.size() <= 60
+        && data.packsToBuy is int && data.packsToBuy >= 0
+        && data.packPriceMinor is int && data.packPriceMinor >= 0
+        && data.lineTotalMinor is int && data.lineTotalMinor >= 0
+        && data.purchased is bool
+        && (!('purchasedAt' in data) || data.purchasedAt == null || (data.purchasedAt is string && data.purchasedAt.size() <= 40))
+        && (!('actualPaidMinor' in data) || data.actualPaidMinor == null || (data.actualPaidMinor is int && data.actualPaidMinor >= 0))
+        && data.priceSource is string && data.priceSource.size() <= 24
+        && data.usedIn is list && data.usedIn.size() <= 60;
+    }
+
+    function isValidPriceOverride(data) {
+      return data.keys().hasAll(['ingredientId', 'packPriceMinor', 'updatedAt'])
+        && data.keys().hasOnly(['ingredientId', 'packPriceMinor', 'updatedAt'])
+        && isValidId(data.ingredientId)
+        && data.packPriceMinor is int && data.packPriceMinor >= 1 && data.packPriceMinor <= 5000000;
+    }
+
+    function isValidShare(data) {
+      return data.keys().hasAll(['shareId', 'ownerUid', 'planName', 'summary', 'meals', 'grocery', 'createdAt'])
+        && data.keys().hasOnly(['shareId', 'ownerUid', 'planName', 'summary', 'meals', 'grocery', 'createdAt'])
+        && isValidId(data.shareId)
+        && data.ownerUid == request.auth.uid
+        && data.planName is string && data.planName.size() >= 1 && data.planName.size() <= 100
+        && data.summary is map
+        && data.meals is list && data.meals.size() <= 124
+        && data.grocery is list && data.grocery.size() <= 200;
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['name', 'email', 'topic', 'message', 'createdAt'])
+        && data.keys().hasOnly(['name', 'email', 'topic', 'message', 'createdAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && data.topic in ['pricing', 'recipe', 'bug', 'feature', 'general']
+        && data.message is string && data.message.size() >= 10 && data.message.size() <= 1200
+        && data.createdAt == request.time;
+    }
+
+    function isValidWaitlist(data) {
+      return data.keys().hasAll(['email', 'country', 'createdAt'])
+        && data.keys().hasOnly(['email', 'country', 'createdAt'])
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && data.country in ['PH', 'MY', 'JP', 'US']
+        && data.createdAt == request.time;
+    }
+
+    // Users & private subcollections
+    match /users/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if false;
+      allow create: if isValidId(uid)
+        && isOwner(uid)
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(uid)
+        && isOwner(uid)
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && !incoming().diff(existing()).affectedKeys().hasAny(['quota', 'createdAt', 'uid']);
+      allow delete: if isValidId(uid) && isOwner(uid);
+
+      match /plans/{planId} {
+        allow get: if isValidId(uid) && isValidId(planId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(planId) && isOwner(uid) && isValidPlan(incoming());
+        allow update: if isValidId(uid) && isValidId(planId) && isOwner(uid)
+          && isValidPlan(incoming())
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'status', 'progress', 'summary', 'warnings', 'isSaved', 'shareId', 'updatedAt'
+          ]);
+        allow delete: if isValidId(uid) && isValidId(planId) && isOwner(uid);
+
+        match /meals/{mealId} {
+          allow get: if isValidId(uid) && isValidId(planId) && isValidId(mealId) && isOwner(uid);
+          allow list: if isValidId(uid) && isValidId(planId) && isOwner(uid);
+          allow create: if isValidId(uid) && isValidId(planId) && isValidId(mealId)
+            && isOwner(uid)
+            && isValidMeal(incoming())
+            && exists(/databases/$(database)/documents/users/$(uid)/plans/$(planId));
+          allow update: if isValidId(uid) && isValidId(planId) && isValidId(mealId)
+            && isOwner(uid)
+            && isValidMeal(incoming())
+            && exists(/databases/$(database)/documents/users/$(uid)/plans/$(planId))
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'recipeId', 'recipeSnapshot', 'ingredients', 'costMinor',
+              'kcalPerPerson', 'proteinGPerPerson', 'swapped', 'cooked'
+            ]);
+          allow delete: if isValidId(uid) && isValidId(planId) && isValidId(mealId) && isOwner(uid);
+        }
+
+        match /grocery/{itemId} {
+          allow get: if isValidId(uid) && isValidId(planId) && isValidId(itemId) && isOwner(uid);
+          allow list: if isValidId(uid) && isValidId(planId) && isOwner(uid);
+          allow create: if isValidId(uid) && isValidId(planId) && isValidId(itemId)
+            && isOwner(uid)
+            && isValidGroceryItem(incoming())
+            && exists(/databases/$(database)/documents/users/$(uid)/plans/$(planId));
+          allow update: if isValidId(uid) && isValidId(planId) && isValidId(itemId)
+            && isOwner(uid)
+            && isValidGroceryItem(incoming())
+            && exists(/databases/$(database)/documents/users/$(uid)/plans/$(planId))
+            && (
+              incoming().diff(existing()).affectedKeys().hasOnly(['purchased', 'purchasedAt', 'actualPaidMinor']) ||
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'neededQty', 'packLabel', 'packSize', 'packsToBuy', 'packPriceMinor', 'lineTotalMinor', 'leftoverQty', 'priceSource', 'usedIn'
+              ])
+            );
+          allow delete: if isValidId(uid) && isValidId(planId) && isValidId(itemId) && isOwner(uid);
+        }
+      }
+
+      match /priceOverrides/{ingredientId} {
+        allow get: if isValidId(uid) && isValidId(ingredientId) && isOwner(uid);
+        allow list: if isValidId(uid) && isOwner(uid);
+        allow create: if isValidId(uid) && isValidId(ingredientId) && isOwner(uid) && isValidPriceOverride(incoming());
+        allow update: if isValidId(uid) && isValidId(ingredientId) && isOwner(uid)
+          && isValidPriceOverride(incoming())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['packPriceMinor', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidId(ingredientId) && isOwner(uid);
+      }
+    }
+
+    // Shared library (admin write, verified read)
+    match /recipes/{recipeId} {
+      allow get: if isValidId(recipeId) && isVerified();
+      allow list: if isVerified();
+      allow write: if isValidId(recipeId) && isAdmin();
+    }
+
+    match /ingredients/{ingredientId} {
+      allow get: if isValidId(ingredientId) && isVerified();
+      allow list: if isVerified();
+      allow write: if isValidId(ingredientId) && isAdmin();
+    }
+
+    match /prices/{priceId} {
+      allow get: if isValidId(priceId) && isVerified();
+      allow list: if isVerified();
+      allow write: if isValidId(priceId) && isAdmin();
+    }
+
+    // Public read-only plan snapshot (single doc get only, no list)
+    match /shares/{shareId} {
+      allow get: if isValidId(shareId);
+      allow list: if false;
+      allow create: if isValidId(shareId) && isVerified() && isValidShare(incoming());
+      allow update: if false;
+      allow delete: if isValidId(shareId) && isVerified() && existing().ownerUid == request.auth.uid;
+    }
+
+    // Approved testimonials only
+    match /testimonials/{testimonialId} {
+      allow get: if isValidId(testimonialId) && (existing().approved == true || isAdmin());
+      allow list: if resource.data.approved == true || isAdmin();
+      allow write: if isValidId(testimonialId) && isAdmin();
+    }
+
+    // Public contact & waitlist submission
+    match /feedback/{feedbackId} {
+      allow create: if isValidId(feedbackId) && isValidFeedback(incoming());
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /waitlist/{waitlistId} {
+      allow create: if isValidId(waitlistId) && isValidWaitlist(incoming());
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && (isOwner(adminUid) || isAdmin());
+      allow list, write: if false;
+    }
+
+    match /config/{docId} {
+      allow read: if isVerified();
+      allow write: if isAdmin();
+    }
+
+    // Health connection check doc (read-only ping)
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+  }
+}

@@ -1,0 +1,29 @@
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  body::after {
+    display: none !important;
+  }
+
+  header,
+  nav,
+  aside,
+  footer,
+  .noPrint,
+  [data-no-print='true'] {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .printBreakInsideAvoid {
+    break-inside: avoid;
+  }
+}

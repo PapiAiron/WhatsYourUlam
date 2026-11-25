@@ -1,0 +1,6 @@
+{
+  "name": "Smart Meal Planner",
+  "description": "Tell us your budget. We'll plan your meals. Budget-first Filipino meal planning with local market pricing, pack-aware grocery lists, and interactive 3D table showcase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

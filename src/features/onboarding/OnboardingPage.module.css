@@ -1,0 +1,62 @@
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+  padding: var(--sp-8) var(--sp-6);
+}
+
+.container {
+  max-width: 980px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clay);
+  margin-top: var(--sp-2);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+}
+
+.sub {
+  color: var(--ink-2);
+  max-width: 600px;
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin-bottom: var(--sp-3);
+}
+
+.hint {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  margin-bottom: var(--sp-3);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.footer {
+  margin-top: var(--sp-6);
+  display: flex;
+  justify-content: flex-end;
+}

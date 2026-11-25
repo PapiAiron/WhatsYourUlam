@@ -1,0 +1,634 @@
+# SMART MEAL PLANNER: MASTER BUILD PROMPT
+
+For Google AI Studio (Build mode). Written 26 Nov 2026.
+
+---
+
+## READ THIS FIRST (not part of the prompt)
+
+**How to use**
+1. Open Google AI Studio, go to Build, and choose the strongest model in the model dropdown.
+2. Paste everything between `=== BEGIN PROMPT ===` and `=== END PROMPT ===` as ONE message.
+3. If the output stops partway, reply: `Continue from the next unwritten file. Do not repeat finished files.`
+4. When it finishes, export to GitHub, then follow "YOUR SETUP CHECKLIST" at the bottom of this file.
+
+**The AI this app uses at runtime: Google Gemini (server-side only)**
+
+| Job | Model ID (kept in env vars) | Published price (Google pricing page, Nov 2026) |
+|---|---|---|
+| Recipe generation, swaps, structured JSON | `gemini-3.5-flash-lite` | $0.30 in / $2.50 out per 1M tokens (Batch/Flex $0.15 / $1.25) |
+| Repair pass when validation fails | `gemini-3.8-flash` | $0.75 / $3.75 until 31 Dec 2026, then $1.50 / $7.50 |
+| Dish images | `gemini-nano-banana-2.1`, fallback `gemini-3.1-flash-lite-image` | about $0.034 per 1K image (about $0.017 via Batch) |
+| Price estimates for unknown ingredients (optional) | same text model + Google Search grounding | 5,000 grounded requests free per month, then $14 per 1,000 |
+
+Why Gemini: it is cheapest at the scale this app needs, supports schema-constrained JSON, generates images on the same API key, has Batch/Flex discounts, and sits in the same Google ecosystem as Firebase. The paid tier does not use your data to improve Google's products; the free tier does, so use a billing-enabled key in production. The code hides the vendor behind an `AiProvider` interface so it can be swapped later. Model names change fast, so they live in env vars, not in code.
+
+**The key design decision:** the AI never does the money math and is rarely called per plan. A shared **Recipe Library** in Firestore holds approved recipes with images. A deterministic engine picks recipes, scales quantities, rounds to real pack sizes and totals the cost. Gemini is only called to fill gaps in the library (new recipes), estimate missing prices, and generate images, and every result is cached for all users. This is what makes the app cheap, fast, accurate and scalable.
+
+---
+
+=== BEGIN PROMPT ===
+
+# 0. ROLE AND OUTPUT CONTRACT
+
+You are a principal full-stack engineer and senior product designer. Build **Smart Meal Planner**, a production-grade, premium, budget-first meal planning web app, as a complete repository. The tagline is: **"Tell us your budget. We'll plan your meals."**
+
+Output contract:
+- Write EVERY file in full. No `...`, no "rest of file", no `TODO`, no placeholder logic, no mock data in shipped code paths (seed data is allowed and required).
+- Work in the build order in section 20. Print the final file tree first, then create files.
+- If you hit an output limit, stop at a file boundary, list the files still to write, and wait for "continue".
+- The result must run with `npm install && npm run dev` locally and deploy on Render using only the `render.yaml` and README you write. I will not give you any account access; everything must be deployable by following your docs.
+
+# 1. PRODUCT SUMMARY
+
+Users enter a food budget, household size, duration, food preferences, restrictions, available cooking equipment and meals per day. The app returns a complete meal plan: daily meals with **a photo of each dish**, a **full recipe** with per-ingredient **cost breakdown**, daily and total costs, a consolidated **grocery list** (real pack sizes), and live **budget monitoring**. Prices and dishes adapt to the user's country and region; this is not a currency conversion. Phase 1 ships the Philippines (PHP, ₱) fully working, with the architecture and data model ready for other countries.
+
+Primary users: families on a grocery budget, students living alone, working professionals, couples, people on a fixed income.
+
+Inputs (wizard): country and region, budget, household size, duration (3 days, 1 week, 2 weeks, 1 month, custom), food preferences (pork, chicken, beef, seafood, fish, vegetables, eggs, vegetarian, other), restrictions and allergies and excluded ingredients, cooking equipment, meals per day (2 or 3, plus optional snacks), pantry items already at home, and shopping frequency.
+
+# 2. NON-NEGOTIABLE RULES
+
+Stack and structure
+1. **React (latest stable) + Vite + TypeScript in strict mode** for the client. Node + Express + TypeScript for the API. npm workspaces monorepo: `client`, `server`, `shared`.
+2. **CSS lives in separate files, never inside TypeScript.** Every component is a folder with `Name.tsx` and `Name.module.css` (CSS Modules) plus an `index.ts` barrel. Global CSS is limited to `styles/tokens.css`, `reset.css`, `base.css`, `typography.css`, `animations.css`, `utilities.css`, `print.css`. **Forbidden:** Tailwind, styled-components, Emotion, CSS-in-JS, `<style>` blocks in TSX, inline `style={{}}` (the only exception: setting a CSS custom property such as `style={{ '--progress': value }}`).
+3. **Firebase** is the data and identity layer: Authentication, Firestore, Cloud Storage. Client uses the modular SDK; server uses `firebase-admin`.
+4. **Render-ready:** `render.yaml` Blueprint with a static site (client), a web service (API), a background worker, and a Key Value instance. Everything configurable by env vars. Include `.env.example` files with names only, no values.
+
+Secrets and AI
+5. The Gemini API key and the Firebase service account exist **only on the server**. The client bundle must never contain `@google/genai`, any Gemini key, or `process.env.GEMINI_*`. Firebase web config is public by design and goes in `VITE_FIREBASE_*`.
+6. AI output is untrusted. Always parse it with Zod, validate it semantically, and compute all money, quantities, allergens and equipment compatibility in code.
+
+No tooling residue (very important)
+7. The finished site must contain **no trace of Google AI Studio or its templates**: no `metadata.json`, no AI Studio or Gemini branding, badges, "Built with" footers, default titles, sample components, template README text, `importmap` or `esm.sh`/CDN script imports, Tailwind CDN, `window.aistudio` hooks, or telemetry I did not ask for. Every dependency comes from npm. Dish photos are generated by the pipeline in section 12; never hotlink stock photos. The Privacy Policy may name Google as a data processor for transparency; nowhere else.
+
+Quality and honesty
+8. **Money is integer minor units** (centavos) everywhere, named with a `Minor` suffix. Format with `Intl.NumberFormat` using the currency's real fraction digits (JPY has 0).
+9. Prices are **estimates** and must be labeled as such in the UI (a small "Estimate" badge and a footnote). Never invent testimonials, user counts, ratings, press logos or statistics. Any social-proof block renders only from real, admin-approved Firestore data and is hidden when empty.
+10. Accessibility: WCAG 2.2 AA, keyboard-complete, visible focus rings, semantic landmarks, `aria-live` for async status, 44px touch targets, honors `prefers-reduced-motion` and `prefers-color-scheme`.
+11. Allergen safety: allergens are derived from the ingredient catalog in code, used as a hard filter, and the UI says "Always check labels. We can't guarantee allergen-free results."
+12. Nutrition shown is approximate and not medical advice (small disclaimer where shown).
+
+# 3. ARCHITECTURE
+
+```
+Browser (Vite SPA, Render Static Site)
+  ├─ Firebase Auth (Google + Email/Password + email verification)  → ID token
+  ├─ Firestore (client SDK, rules-protected): realtime reads of the user's own plans/meals/grocery
+  └─ HTTPS + Bearer ID token → Render Web Service "api" (Express)
+        ├─ verifies token (Admin SDK), requires email_verified, optional App Check
+        ├─ POST /v1/plans → validates → enqueues job → 202 {planId}
+        ├─ rate limits + quotas (Redis), idempotency keys
+        └─ reads/writes Firestore (Admin SDK)
+
+Render Background Worker "worker" (same codebase, entry src/worker.ts) via BullMQ on Render Key Value (Redis)
+  ├─ job plan.generate: load library → fill gaps with Gemini → solve → write plan/meals/grocery → progress updates
+  ├─ job recipe.generate: Gemini structured recipe(s) → validate → save to library
+  └─ job image.generate: Gemini image → sharp → Firebase Storage → update recipe doc
+```
+
+Rules:
+- The API and worker are **stateless** and horizontally scalable. No in-process state that matters. Redis holds the queue, rate limiter, and short-lived caches.
+- Plan generation is **asynchronous**. The client creates the plan, then subscribes to the Firestore plan doc with `onSnapshot` to show live progress ("Choosing dishes… Pricing your market… Cooking up photos… Done").
+- If Redis is missing (local dev), fall back to an in-memory queue and limiter so `npm run dev` works with zero infrastructure besides Firebase emulators or a dev project.
+- If Gemini is down, rate-limited, or the daily AI spend cap is reached, **degrade gracefully**: build the plan from the existing library only and show a notice. Never fail the whole request because an image or a new recipe could not be generated.
+
+# 4. REPOSITORY STRUCTURE
+
+Follow this exactly. One component per folder. Features own their code and do not import another feature's internals; shared pieces go in `components/` or `shared/`. Absolute imports through the `@/` alias (client) and `@smp/shared` (all packages). Components `PascalCase.tsx`; hooks `useThing.ts`; everything else `camelCase.ts`. Keep files under about 250 lines.
+
+```
+smart-meal-planner/
+├─ package.json                  # workspaces: client, server, shared; scripts: dev, build, lint, test, seed
+├─ tsconfig.base.json  .nvmrc  .editorconfig  .prettierrc  eslint.config.js  .gitignore
+├─ render.yaml  firebase.json  firestore.rules  firestore.indexes.json  storage.rules
+├─ .github/workflows/ci.yml      # install, lint, typecheck, test, build
+├─ README.md
+├─ docs/  ARCHITECTURE.md  DEPLOY_RENDER.md  FIREBASE_SETUP.md  DATA_MODEL.md  DESIGN_SYSTEM.md
+├─ scripts/  seed.ts  set-admin.ts  make-brand-assets.mjs  generate-landing-images.ts  check-contrast.mjs
+├─ shared/src/
+│   ├─ schemas/   (zod: planInput, recipe, ingredient, price, plan, meal, grocery, api errors)
+│   ├─ types/  money/  units/  constants/ (equipment taxonomy, meal types, countries, allergens)  index.ts
+├─ server/src/
+│   ├─ index.ts  worker.ts  app.ts
+│   ├─ config/ (env.ts validated by zod, firebase.ts, redis.ts, logger.ts)
+│   ├─ middleware/ (auth, appCheck, rateLimit, quota, idempotency, validate, error, requestId)
+│   ├─ routes/ (health, me, plans, prices, share, feedback, waitlist, admin)
+│   ├─ controllers/
+│   ├─ services/
+│   │   ├─ planEngine/ (candidates, feasibility, solver, scaling, packing, trips, nutrition, index)
+│   │   ├─ ai/ (AiProvider.ts, geminiProvider.ts, prompts/, schemas.ts, validate.ts, spendGuard.ts)
+│   │   ├─ images/ (imagePrompt.ts, generate.ts, process.ts, storage.ts)
+│   │   ├─ pricing/ (priceBook.ts, estimate.ts, overrides.ts)
+│   │   └─ recipes/ (library.ts, cache.ts, review.ts)
+│   ├─ jobs/ (queues.ts, planGenerate.ts, recipeGenerate.ts, imageGenerate.ts)
+│   ├─ repositories/ (users, plans, meals, grocery, recipes, ingredients, prices, shares, usage)
+│   ├─ seed/ (ingredients.ts, prices.ph.ts, recipes.ph.ts)
+│   └─ tests/
+└─ client/
+    ├─ index.html  vite.config.ts  tsconfig.json  .env.example
+    ├─ public/ (favicon.svg, robots.txt, sitemap.xml, images/landing/, og/)
+    └─ src/
+        ├─ main.tsx
+        ├─ app/ (App.tsx, providers/, router/ (routes.tsx, guards), layouts/ (MarketingLayout, AuthLayout, AppShell))
+        ├─ styles/ (tokens.css, themes.css, reset.css, base.css, typography.css, animations.css, utilities.css, print.css, index.css)
+        ├─ components/
+        │   ├─ ui/ (Button, Field, CurrencyInput, Stepper, Slider, Switch, SegmentedControl, ChipSelect, Dialog, Drawer, Tabs, Accordion, Tooltip, Menu, Toast, Skeleton, EmptyState, Avatar, Badge)
+        │   ├─ bento/ (BentoGrid, BentoTile)
+        │   ├─ charts/ (RingProgress, Donut, StackedBar, Sparkline)   # hand-built SVG, no chart library
+        │   ├─ brand/ (Logo, Wordmark, Illustration set)
+        │   └─ seo/ (Seo, JsonLd)
+        ├─ features/
+        │   ├─ landing/  auth/  onboarding/  planner/ (wizard)  plans/ (overview, day view)
+        │   ├─ recipes/ (RecipeDrawer, CostBreakdown, DishImage)  grocery/  budget/  prices/
+        │   ├─ settings/  admin/  legal/
+        │   └─ each: components/ hooks/ api/ pages/ types.ts
+        ├─ hooks/  lib/ (firebase.ts, apiClient.ts, queryClient.ts, i18n.ts, analytics.ts, appCheck.ts)
+        ├─ store/ (zustand: wizardDraft, ui)  utils/  constants/  locales/ (en.json complete, fil.json scaffold)  test/
+```
+
+# 5. DEPENDENCIES (use exactly these families)
+
+Client: `react`, `react-dom`, `react-router-dom`, `firebase`, `@tanstack/react-query`, `zustand`, `react-hook-form`, `@hookform/resolvers`, `zod`, Radix primitives (`@radix-ui/react-dialog`, `-dropdown-menu`, `-tabs`, `-accordion`, `-tooltip`, `-slider`, `-switch`, `-toggle-group`, `-popover`, `-checkbox`), `motion` (for layout/route transitions and counters only; CSS for everything else), `@phosphor-icons/react` (use the Light and Duotone weights), `i18next`, `react-i18next`, `date-fns`, `clsx`, `@zxcvbn-ts/core` (+ common/en packs), `vite-plugin-pwa`. Fonts, self-hosted: `@fontsource/young-serif`, `@fontsource-variable/hanken-grotesk`, `@fontsource/dm-mono`. Dev: `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`, `@testing-library/react`, `@playwright/test`, `eslint`, `typescript-eslint`, `prettier`.
+
+Server: `express`, `helmet`, `cors`, `compression`, `pino`, `pino-http`, `zod`, `firebase-admin`, `@google/genai`, `bullmq`, `ioredis`, `express-rate-limit`, `rate-limit-redis`, `sharp`, `p-limit`, `nanoid`, `tsup`, `tsx`, `vitest`, `supertest`.
+
+Radix primitives are unstyled; style them with your own CSS Modules. Look up each library's current API instead of relying on memory.
+
+# 6. DESIGN SYSTEM: BENTO GRID + WARM ORGANIC MINIMALISM
+
+The site should feel like a beautifully printed cookbook crossed with a calm modern product: paper, clay, herbs, turmeric. Restrained, tactile, editorial. It must NOT look like a generic AI-generated site.
+
+## 6.1 Tokens (`tokens.css` and `themes.css`; all colors, spacing, radii, type and motion are CSS custom properties)
+
+Light theme:
+```
+--paper:#F7F1E5; --paper-2:#F0E8D8; --card:#FFFBF3; --line:#E3D8C3;
+--ink:#2A2118; --ink-2:#5B4E41; --ink-3:#8C7D6C;
+--clay:#A8481F; --clay-hover:#8F3A16; --clay-wash:#F3D9C9;
+--moss:#5E6F3E; --moss-wash:#DDE3C6;
+--turmeric:#D49A2A; --turmeric-wash:#F5E3B5;
+--tamarind:#7B2D3B; --tamarind-wash:#EBCDD2;
+```
+Dark theme (warm espresso, not black or gray): `--paper:#1B1612; --paper-2:#211B16; --card:#261F19; --line:#3A3027; --ink:#F3EADB; --ink-2:#C9BBA6; --ink-3:#9A8B76;` and adjusted washes. Support system preference plus a manual toggle persisted in localStorage, with no flash on load (inline pre-paint theme script in `index.html`).
+
+`scripts/check-contrast.mjs` must verify every text/background pairing meets AA (4.5:1 body, 3:1 large) and fail CI otherwise. Do not trust the values above blindly; adjust until the script passes.
+
+Spacing on an 8px rhythm. Radii: `--r-tile:28px; --r-inner:18px; --r-chip:999px`. A few hero tiles may use asymmetric "leaf" radii (for example `40px 40px 120px 40px`) sparingly, never more than two per screen.
+
+Surfaces: flat paper with **1px hairline borders** (`--line`), not heavy drop shadows. Shadow appears only on hover: `0 1px 0 rgba(42,33,24,.04), 0 18px 36px -20px rgba(42,33,24,.28)`. Add a very subtle static **paper grain** (inline SVG `feTurbulence`, 3 to 4 percent opacity, `mix-blend-mode:multiply`, `pointer-events:none`, never animated).
+
+## 6.2 Typography (self-hosted, `font-display: swap`, latin subset, only the weights you use)
+
+- Display and big numbers: **Young Serif** (400). Large sizes only, tight leading (about 1.0), `letter-spacing:-0.02em`.
+- UI and body: **Hanken Grotesk** (variable). Body 16 to 17px / 1.55.
+- Money, quantities, eyebrows: **DM Mono** (small, tabular). Eyebrow labels: 12px, uppercase, `0.08em` tracking.
+- Fluid scale with `clamp()`: display 3.5 to 6.5rem, h2 2 to 3.5rem, h3 1.25 to 1.75rem. `font-variant-numeric: tabular-nums` on all prices.
+- If Young Serif numerals look off at any size, fall back to the next serif in the stack: `'Young Serif', 'Iowan Old Style', Georgia, serif`.
+- **Do not use:** Inter, Roboto, Arial, Poppins, Montserrat, Space Grotesk, Outfit, Plus Jakarta, or default system UI as a primary face.
+
+## 6.3 Bento layout
+
+- 12-column CSS Grid, `gap:16px` (12px on mobile), container max 1240px. `BentoTile` takes `colSpan`, `rowSpan` and `tone` (`paper | card | clay | moss | turmeric | ink`) props mapped to CSS classes, no inline styles.
+- Mix tile sizes deliberately (for example 5×2, 4×1, 3×1, 3×2, 4×2) so the grid has rhythm. Never a uniform row of identical cards.
+- Responsive: 12 columns on desktop, 6 on tablet, 1 on mobile, with an intentional mobile order (headline tile, key number tile, imagery, details).
+- Each tile has one job: a single number, a single image, a single idea. Generous internal padding (24 to 32px), a small mono eyebrow, then content.
+- Organic touches: hand-drawn-feeling SVG dividers, blob-shaped image masks (SVG `clip-path`), subtle duotone image treatments, small leaf/grain/steam motifs. All original SVG, no stock art.
+
+## 6.4 Motion (CSS first; `motion` only for layout, route transitions and number counters)
+
+Easing `cubic-bezier(.22,1,.36,1)`. Durations: 160ms (micro), 280ms (UI), 600ms (reveal). Animate only `transform` and `opacity`.
+- Scroll-reveal with 60ms stagger (IntersectionObserver; use CSS `animation-timeline: view()` as progressive enhancement).
+- Hero: budget ring draws from 0 to its value; the money figure counts up; grocery list ticks check themselves one by one; dish tiles drift 4 to 8px on slow parallax. Pointer tilt max 3° only on `(pointer:fine)`.
+- Tiles lift 2px with hairline darkening on hover. Buttons have a pressed state (scale .98).
+- Meal swap: outgoing card slides and fades, the new card rises in. A total "settles" with a count animation.
+- Checkbox "ink draw" for purchased items. Warm-tinted skeleton shimmer. Route transitions: crossfade plus 12px rise.
+- Slow marquee of ingredient names on the landing page. Pause on hover.
+- `prefers-reduced-motion`: replace all motion with opacity fades under 120ms and disable parallax, tilt and marquee.
+
+## 6.4b Icons and imagery
+Phosphor Light/Duotone at consistent sizes (16/20/24) in `currentColor`. **Never emoji as icons.** Original SVG mark and wordmark (a simple bowl glyph with a leaf-shaped steam curl, wordmark in Young Serif). Illustrations are original organic-shape SVGs. Photos are the generated dish images.
+
+## 6.5 Anti-"AI look" ban list
+
+Do not produce: purple/indigo/blue-violet gradients; glassmorphism or frosted blur cards; neon glows; blurred gradient orbs; centered-everything heroes with a gradient headline and two buttons; a pill badge above every headline; uniform grids of identical cards with icon-in-a-circle; `rounded-2xl` plus `shadow-xl` on everything; gray-on-gray low contrast; emoji or "✨" anywhere; fake dashboards with lorem; invented names and reviews; hype words ("unlock", "supercharge", "seamless", "revolutionize", "elevate", "game-changing").
+
+Voice: plain, warm, specific to food and money. Short sentences. Real numbers. Examples: "₱5,000 · 4 mouths · 14 days." "Starts with your pesos, not your cravings." "Prices from your market, not a currency converter." "A shopping list that knows chicken comes in 500 g." "Don't feel like Thursday? Swap it, the budget holds." "Only dishes your kitchen can actually cook."
+
+## 6.6 Component states
+Every component needs hover, focus-visible, active, disabled, loading, error and empty states. Forms use inline validation with specific messages, never alerts. Provide `EmptyState` with original illustration, `Skeleton` for every async surface, and an error boundary with a friendly recovery.
+
+# 7. PAGES AND ROUTES
+
+Public: `/` (landing), `/login`, `/signup`, `/forgot-password`, `/verify-email`, `/auth/action` (handles Firebase `verifyEmail`, `resetPassword`, `recoverEmail` links in our own branded UI), `/share/:shareId` (read-only plan view), `/privacy`, `/terms`, `/cookies`, `/contact`, `*` (designed 404).
+
+Authenticated and verified (inside `AppShell`: left rail on desktop, bottom tab bar on mobile, top bar with plan switcher and avatar menu):
+- `/app` Dashboard (bento): Today's meals with photos, budget ring, next shopping trip, grocery progress, "Start a new plan".
+- `/app/new` Plan wizard (7 steps, section 8).
+- `/app/plans` Saved plans. `/app/plans/:planId` Plan overview. `/app/plans/:planId/day/:n` Day view. `/app/plans/:planId/grocery` Grocery list. `/app/plans/:planId/budget` Budget monitor.
+- `/app/recipes` Recipe browser (library, filters). Recipes also open in a drawer anywhere via `?recipe=:id`.
+- `/app/prices` My prices (adjust local prices; shows estimate vs your price).
+- `/app/settings` Profile, country/currency/units, kitchen defaults, security (change password with re-auth), data export, delete account.
+- `/app/admin` (custom claim `admin` only): price book editor with CSV import/export, recipe review queue (approve, reject, regenerate image), ingredient catalog, config.
+
+Lazy-load every route. Redirect rules: signed-out → `/login?next=…`; signed-in but unverified → `/verify-email`; verified but not onboarded → a short onboarding (country, household, kitchen defaults) then `/app`.
+
+## 7.1 Landing page (the premium first impression)
+
+Sections, in order. All copy is real and specific; no lorem.
+1. **Header:** wordmark, links (How it works, Features, Countries, FAQ), theme toggle, "Log in", primary "Start planning". Sticky, paper-colored with a hairline bottom border (no blur).
+2. **Hero (bento composition):** left: mono eyebrow "Budget-first meal planning", display H1 "Tell us your budget. We'll plan your meals.", sub "Fourteen days of breakfasts, lunches and dinners for your household, priced at your local market and cooked on the stove you actually own." Inline mini-form (currency-aware budget field, household stepper, "Plan my meals" which goes to `/signup` carrying the values in the query string and prefilling the wizard after login). Right: an asymmetric bento mosaic: large dish photo tile with a cost-per-serving tag, animated budget ring tile, tiny grocery-list tile that ticks itself, a "Today ₱312" tile, a week-strip tile. Use landing images from `public/images/landing/` (produced by `scripts/generate-landing-images.ts`); until they exist, use duotone organic SVG tiles so the page is complete with zero images.
+3. **Currency and market strip:** "Live in the Philippines (₱). Malaysia, Japan and the United States next." Honest, no fake logos.
+4. **How it works (3 tiles):** Budget → Kitchen and tastes → Plan and shopping list, each with a micro-animation.
+5. **Feature bento (7 to 8 tiles of different sizes):** budget-first generator; local prices (not currency conversion); pack-aware grocery list; equipment-aware recipes; swap any meal; budget monitor; shopping trips by freshness; print and share.
+6. **Try it without an account:** a slider ₱1,500 to ₱15,000 driving a **static, clearly labeled sample** plan summary (embedded sample data, no API call), showing days covered, example dishes with photos and costs.
+7. **Dish gallery:** horizontally scrollable cards (photo, name, cost per serving, time, equipment icons) from embedded seed data.
+8. **Made for your market:** tiles for PH (live), MY, JP, US (coming), each with example dishes and the currency, to show it adapts meals and not just currency.
+9. **Who it's for:** families, students, solo professionals, fixed-income households, as editorial tiles.
+10. **Social proof:** component reading approved `testimonials` from Firestore; **hidden entirely when empty.**
+11. **FAQ** (accessible accordion plus `FAQPage` JSON-LD): How accurate are prices? What if I don't have an oven? Allergies? Which countries? Is my data private? How much does it cost?
+12. **Final CTA band** and **footer** (product, legal, contact, currency/language selectors, "Prices are estimates and vary by store").
+
+# 8. PLAN WIZARD (`/app/new`)
+
+Seven steps on one page, with animated step transitions, a persistent live-summary tile (the "bento receipt" that fills in as they go) and draft autosave (zustand + localStorage, restored on return):
+1. **Budget:** `CurrencyInput` (currency from country; formatting is caret-safe). Plus a live **budget-fit meter** (Tight / Comfortable / Generous) from `POST /v1/plans/estimate`, which uses no AI and returns the minimum feasible and typical budgets for the other inputs.
+2. **Household:** people count (stepper 1 to 20, plus quick chips 1, 2, 4, 6, 10).
+3. **Duration:** 3 days, 1 week, 2 weeks, 1 month, custom (1 to 31 days), plus start date.
+4. **Tastes and restrictions:** preference chips with icons, allergen chips, free-text "ingredients to avoid" (length-limited, sanitized), diet (none, vegetarian, pescatarian, halal, no pork).
+5. **Kitchen:** equipment chips (gas stove, electric stove, induction, rice cooker, microwave, oven, air fryer, pressure cooker, refrigerator, freezer; basic utensils always on). If no refrigerator, the summary warns that the plan will schedule frequent small shopping trips.
+6. **Meals:** 2 or 3 meals per day, optional categories (breakfast, lunch, dinner, snacks), shopping frequency (once, weekly, twice weekly, every 2 to 3 days).
+7. **Pantry and review:** pick staples already at home (salt, sugar, cooking oil, soy sauce, vinegar, rice, etc.; excluded from costs), review everything, "Generate my plan".
+
+On submit: `POST /v1/plans` with an `Idempotency-Key`, then navigate to a **generation screen** with live progress, a position-in-queue indicator if the queue is busy, and an elegant animation (a pot filling as stages complete). If the budget is infeasible, the result is not a fake plan but an explanation with the minimum workable budget and one-tap adjustments (fewer days, fewer meals, different preferences).
+
+# 9. AUTHENTICATION AND VERIFICATION
+
+Providers: **Email/Password (default login)** and **Google**. Build all flows in our own UI:
+- **Sign up:** name, email, password with strength meter (zxcvbn-ts; require length 10+ and block very weak), terms checkbox, then `createUserWithEmailAndPassword`, `updateProfile`, `sendEmailVerification` (with `continueUrl` to `/auth/action`), then go to `/verify-email`.
+- **Verify email screen:** explains what to do, "Resend email" with a 60-second cooldown and server-side-safe throttling, "I've verified" which calls `reload()` then `getIdToken(true)` (the refreshed token carries `email_verified`, required by Firestore rules and the API), and "Use a different email". Also auto-detect verification on window focus and by polling every 5 seconds for 2 minutes.
+- **Log in:** email/password and "Continue with Google" (use the official Google "G" mark following Google's sign-in branding guidelines). Use `signInWithPopup`; fall back to `signInWithRedirect` when popups fail or on mobile Safari.
+- **Google users** arrive verified. Email/password users are blocked from `/app` and from every API call until `emailVerified === true`.
+- **Account linking:** handle `auth/account-exists-with-different-credential` with a guided "sign in with your original method, then we'll link Google" flow.
+- **Forgot password:** always show the same neutral message (no account enumeration); `/auth/action` handles the reset form with password rules.
+- Map every Firebase error code to a human message. Include rate-limit and network errors.
+- Persistence: local. `AuthProvider` exposes `user`, `status` (`loading | signedOut | unverified | ready`), and `refresh()`. Guards: `RequireAuth`, `RequireVerified`, `RequireOnboarded`, `RequireAdmin`.
+- **Abuse protection:** Firebase **App Check** on the client (reCAPTCHA provider, enabled by env flag) and verified on the server (`X-Firebase-AppCheck`, enforced when `APP_CHECK_ENFORCE=true`). Per-IP and per-user rate limits on all auth-adjacent endpoints.
+- Server `requireAuth` middleware: verify ID token (check revocation for sensitive routes), require `email_verified`, attach `uid`, `isAdmin` (from custom claim).
+- Account deletion: re-authenticate, then `DELETE /v1/me` removes the user's Firestore subtree (plans, meals, grocery, overrides, shares), then the Auth user.
+
+# 10. DATA MODEL (Firestore)
+
+All timestamps are Firestore `Timestamp`. All money is `...Minor` integers. Quantities are in canonical units: `g`, `ml`, or `pc`.
+
+- `users/{uid}`: `displayName, email, photoURL, country, region, currency, locale, unitSystem('metric'|'imperial'), onboardingComplete, defaults{people, equipment[], prefs[], pantry[], shoppingFrequency}, quota{periodKey, plansUsed}, createdAt, updatedAt`.
+- `users/{uid}/plans/{planId}`: `name, status('queued'|'generating'|'ready'|'failed'), progress{stage,pct}, input{…PlanInput}, summary{budgetMinor, shoppingTotalMinor, consumedMinor, leftoverValueMinor, remainingMinor, utilizationPct, perDayMinor[], avgMealMinor, nutritionAvg}, warnings[], isSaved, shareId?, createdAt, updatedAt, engineVersion`.
+- `users/{uid}/plans/{planId}/meals/{mealId}`: `day, mealType, recipeId, recipeSnapshot{name, localName, thumbUrl, imageUrl, lqip, prepMin, cookMin, equipment[]}, servings, ingredients[{ingredientId, name, qty, unit, unitPriceMinor, costMinor, fromPackNote?}], costMinor, kcalPerPerson, swapped, cooked`.
+- `users/{uid}/plans/{planId}/grocery/{itemId}`: `ingredientId, name, category, trip, neededQty, unit, packLabel, packSize, packsToBuy, packPriceMinor, lineTotalMinor, leftoverQty, purchased, purchasedAt, actualPaidMinor?, priceSource('seed'|'admin'|'user'|'estimate'), usedIn[]`.
+- `users/{uid}/priceOverrides/{ingredientId}`: `packPriceMinor, updatedAt`.
+- `recipes/{recipeId}` (global library): `slug, name, localName, description, country, cuisineTags[], mealTypes[], proteinTags[], equipmentRequired[], allergens[] (derived), dietFlags[], baseServings(4), prepMin, cookMin, difficulty, ingredients[{ingredientId, qty, unit, optional, note}], steps[], tips, nutritionPerServing{kcal, proteinG, carbsG, fatG}(approximate), image{status('pending'|'ready'|'failed'), url, thumbUrl, lqip, w, h, promptVersion}, status('approved'|'unreviewed'|'rejected'), source('seed'|'ai'), qualityScore, version, createdAt`.
+- `ingredients/{ingredientId}` (catalog): `slug, names{en, local}, category(aisle), canonicalUnit, allergens[], nutritionPer100{kcal, proteinG, carbsG, fatG}(approximate), shelfLifeDays{room, fridge, freezer}, pantryStaple, defaultPackLabel`.
+- `prices/{country}_{region}_{ingredientId}`: `country, region, ingredientId, packs[{label, size, unit, priceMinor}], source('seed'|'admin'|'ai-estimate'), confidence, updatedAt`.
+- `shares/{shareId}`: unguessable id (nanoid 21), sanitized read-only snapshot of a plan, no PII.
+- `usage/{uid}_{yyyymm}`, `feedback/{id}`, `waitlist/{id}`, `testimonials/{id}{approved}`, `config/app{flags, modelOverrides, aiDailySpendCapUsd, recipeLibraryVersion}`.
+
+## 10.1 Security rules (write `firestore.rules`, `storage.rules`, and rules unit tests; never weaken)
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn()  { return request.auth != null; }
+    function verified()  { return signedIn() && request.auth.token.email_verified == true; }
+    function isOwner(uid){ return verified() && request.auth.uid == uid; }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && request.resource.data.uid == uid;   // profile bootstrap
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['quota','createdAt']);
+      allow delete: if false;                                              // server only
+
+      match /plans/{planId} {
+        allow read: if isOwner(uid);
+        allow write: if false;                                             // server only
+        match /meals/{mealId}   { allow read: if isOwner(uid); allow write: if false; }
+        match /grocery/{itemId} {
+          allow read: if isOwner(uid);
+          allow update: if isOwner(uid) &&
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['purchased','purchasedAt','actualPaidMinor']);
+          allow create, delete: if false;
+        }
+      }
+      match /priceOverrides/{id} { allow read: if isOwner(uid); allow write: if false; } // via API
+    }
+    match /recipes/{id}     { allow read: if verified(); allow write: if false; }
+    match /ingredients/{id} { allow read: if verified(); allow write: if false; }
+    match /prices/{id}      { allow read: if verified(); allow write: if false; }
+    match /shares/{id}      { allow get: if true; allow list: if false; allow write: if false; }
+    match /testimonials/{id}{ allow read: if resource.data.approved == true; allow write: if false; }
+    match /{document=**}    { allow read, write: if false; }
+  }
+}
+```
+Storage rules: `dishes/**` public read (non-sensitive, CDN-cacheable), no client writes (the Admin SDK writes). Also generate `firestore.indexes.json` for every compound query you use (recipes by country + status + mealTypes; plans by createdAt; prices by country + region).
+
+# 11. MEAL-PLAN ENGINE (server, deterministic, heavily tested)
+
+`services/planEngine`. Pure functions where possible. Money math uses integers only.
+
+1. **Load candidates:** approved recipes for the country, from an in-memory LRU cache (TTL 10 minutes, invalidated by `config.recipeLibraryVersion`). Filter hard: meal type; equipment (requirement groups with OR semantics: `stovetop` is satisfied by gas, electric or induction; `fridge` and `freezer` are separate); allergens (derived from catalog); excluded ingredients; diet flags. Soft-score by preferences.
+2. **Gap check:** if there are fewer than `ceil(days × 0.6)` distinct approved candidates for any meal type, enqueue `recipe.generate` for the gap (section 13), validate, add as `unreviewed` (usable immediately but flagged for admin review), and continue.
+3. **Feasibility:** compute the cheapest possible plan. If it exceeds the budget, return `INFEASIBLE` with `minimumBudgetMinor` and adjustment suggestions. Never output a plan above budget.
+4. **Scaling:** scale each recipe from `baseServings` to `people`; round to practical amounts (nearest 5 g under 100 g, 10 g under 500 g, 25 g above; eggs and pieces to whole numbers or halves); keep a global minimum for seasonings.
+5. **Pack-aware costing (critical):** for each ingredient, aggregate quantity per **shopping trip**, subtract pantry items, then buy `ceil(needed / packSize)` packs choosing the cheapest pack combination from the price book (honor user overrides). Leftover quantity within a trip is carried to later meals in that trip automatically, and across trips only if shelf-stable. Display both numbers:
+   - **Meal cost** = prorated cost of the quantity actually used (what a dish "costs").
+   - **Shopping total** = cash you actually spend, summed over packs. **The budget constraint applies to the shopping total.**
+   - **Leftover value** = shopping total minus consumed total, shown as "still in your kitchen".
+6. **Trips and freshness:** group meals into trips by `shoppingFrequency`; limit each ingredient's use to its `shelfLifeDays` (room, fridge or freezer depending on equipment). Without a refrigerator, fresh meat and fish may only be used within the same day or next day of purchase.
+7. **Solver:** (a) build the cheapest feasible assignment of recipes to slots with variety constraints (no repeat of the same recipe within 3 days; protein balance following preference weights; no protein above 40% of dinners unless it is the only preference; at least one vegetable-forward dish per day); (b) **upgrade pass:** while budget remains, swap in preferred-protein or more varied recipes where the marginal cost fits, targeting 92 to 100% utilization ("maximize their food budget"); (c) local search (about 2,000 iterations, seeded RNG so results are reproducible) to improve variety and pack efficiency. Run in the worker, off the request path.
+8. **Nutrition snapshot:** per person per day kcal and protein from ingredient catalog values (approximate). Warn if average is under about 1,500 kcal ("This budget is tight; we've prioritized filling, nutritious staples") with the disclaimer.
+9. **Swap a meal:** `POST /v1/plans/:id/meals/:mealId/swap` picks the best alternative within about ±10% cost and same meal type, else the cheapest valid one; recompute grocery and totals in a Firestore transaction; the new total must remain within the original budget; return an undo token valid for 30 seconds.
+10. **Write results:** plan doc, meals subcollection, grocery subcollection in batched writes (≤500 per batch); progress updates at each stage.
+
+Tests (Vitest): pack rounding, leftover carry, trip splitting, shelf-life/no-fridge rules, integer-only money, budget never exceeded across 500 randomized inputs, infeasible detection, swap keeps budget, deterministic output for a given seed.
+
+# 12. DISH IMAGES
+
+Every recipe has a photo. Pipeline in `services/images`:
+- On recipe creation (seed or AI), enqueue `image.generate` (BullMQ, concurrency from env, global token bucket in Redis to respect `GEMINI_IMAGE_RPM`).
+- Prompt template (versioned as `promptVersion`): "Editorial overhead food photograph at a 45 degree angle of {name}, {visible-ingredient description}, served in {culturally appropriate everyday dish}, on a warm linen and light wood table, soft natural window light, shallow depth of field, matte color, appetizing home-cooked portion, no people, no hands, no text, no logos, no watermark." Home-cooked realism, not restaurant plating, to match budget reality.
+- Model: `GEMINI_MODEL_IMAGE` (primary) with `GEMINI_MODEL_IMAGE_FALLBACK`; request 4:3 at 1K via the SDK's current image config types.
+- Post-process with `sharp`: 1200×900 WebP (q80), 480×360 WebP thumbnail, 24px blurred LQIP as base64. Upload to `dishes/{recipeId}/{hash}.webp` with `cacheControl: public,max-age=31536000,immutable`. Store URLs, dimensions and LQIP on the recipe doc.
+- Safety/retry: if blocked or failed, retry up to 3 times with prompt variants, then set `status:'failed'` and show the designed placeholder. **Never block plan creation on images.**
+- Client `DishImage` component: blur-up from LQIP, `loading="lazy"`, explicit width/height (no layout shift), `srcSet`, subscribes to the recipe doc when `pending` and swaps in the real image when ready; the placeholder is an original organic duotone tile with shimmer. Small caption in the recipe drawer: "AI-generated illustration. Your dish may look different."
+- Cost control: images are generated **once per recipe** and shared by all users. `scripts/seed.ts` supports `--images=batch` to pre-generate the seed library via the Batch API at roughly half price.
+
+# 13. AI LAYER
+
+`services/ai` with an `AiProvider` interface (`generateStructured<T>(schema, request)`, `generateImage(request)`) and a `GeminiProvider` using `@google/genai` on the server. Model IDs and limits from env (names in section 18). Always consult the SDK's current types for structured-output and image configuration.
+
+- **Structured output only:** Zod schema → JSON Schema → `responseMimeType: 'application/json'` + `responseSchema`. Low temperature (about 0.4) for recipes.
+- **Recipe generation prompt (system):** country-specific, home-cookable on the stated equipment, budget-conscious, common local dishes and ingredient names. Ingredient references **must use `ingredientId`s from the supplied catalog list**; genuinely new ingredients go in `newIngredients` (canonical unit, category, aisle) and are queued for admin review. Quantities are per 4 servings in canonical units. No brand names. Steps 3 to 12, short and imperative. Include an `imagePrompt` describing how the finished dish looks.
+- **Validation (`validate.ts`) before saving:** Zod parse; every ingredient resolves; per-serving mass between about 250 and 700 g; category-aware quantity bounds (for example 60 to 120 g dry rice and 80 to 200 g protein per serving); equipment tags valid; allergens and diet flags **recomputed from the catalog**, ignoring any the AI claimed; duplicate-name check against the library. On failure: one retry with the validation errors fed back, then one repair pass on `GEMINI_MODEL_TEXT_STRONG`, then discard.
+- **Prompt-injection safety:** user free text (excluded ingredients, plan names) is length-limited, stripped of control characters, wrapped in a clearly delimited data block, and never allowed to change instructions or schema. Never put secrets or other users' data in prompts.
+- **Price estimation (optional, env-flagged):** for ingredients missing from the price book, ask the model with Search grounding for typical pack sizes and prices in the user's region, mark `source:'ai-estimate'` with a confidence, cache for 30 days, and always show "Estimate".
+- **Cost and quota guards:** `spendGuard.ts` tracks token and image usage per call (log tokens, latency, estimated USD); enforce a global `AI_DAILY_SPEND_CAP_USD` (circuit breaker → library-only mode) and per-user quotas: `FREE_PLANS_PER_MONTH` (default 10), swaps per day (default 40), shown in the UI ("7 plans left this month").
+- **Resilience:** exponential backoff with jitter on 429 and 5xx, per-call timeouts, a Redis token bucket for RPM, and an idempotent job design so retries never duplicate recipes.
+
+# 14. RECIPE AND COST-BREAKDOWN UI (a hard requirement)
+
+For every dish, on every day, the user sees the recipe and a full per-ingredient cost breakdown for **the amount of the dish being cooked for their household that day**.
+
+**Meal card** (day view and dashboard): dish photo (with blur-up), name (plus local name), meal-type label, time, equipment icons, **cost today** (mono), a "Swap" button, a "Cooked" toggle.
+
+**Recipe drawer/page:**
+1. Hero photo, title, meta chips (prep, cook, servings = household size, difficulty, equipment).
+2. A big serif figure: "**₱312** for 4 people tonight" with "₱78 per serving" beneath it.
+3. **Cost breakdown table:**
+
+| Ingredient | Amount for {n} people | Unit price | Cost (portion used) | Note |
+|---|---|---|---|---|
+| Chicken thigh | 800 g | ₱210 / kg | ₱168.00 | from 1 kg pack, 200 g left over |
+
+   Columns for amount, unit price and cost; a mono subtotal row; a footnote: "Cost is the share of each pack this dish uses. What you actually pay at the store is on your shopping list." Each row has an "Estimate" or "Your price" badge. Tapping a row's price lets the user adjust it (`PUT /v1/me/price-overrides/:ingredientId`), recomputing the plan.
+4. A small stacked bar showing which ingredients make up the cost.
+5. Steps with an optional per-step timer; approximate nutrition per serving with the disclaimer; tips.
+6. **Day view totals:** each meal's cost, the day total, and a budget-pace indicator against the even daily allowance, with a stacked bar by meal.
+
+Money formatting always through one `formatMoney(minor, currency, locale)` helper from `shared`.
+
+# 15. OTHER APP SCREENS (key behavior)
+
+- **Plan overview (bento):** big budget ring (utilization %), "Spent / Remaining" figures, calendar strip of days with thumbnails, top 5 most expensive ingredients (bar), nutrition snapshot, warnings, actions (Save, Rename, Share, Print, Duplicate, Delete).
+- **Grocery list:** grouped by trip then by aisle; each line: name, packs to buy ("2 × 500 g pack"), the need ("need 800 g"), line total, a check that animates and updates progress; optional "actual price paid"; progress bar; sticky total; offline-friendly; **print stylesheet and PDF-ready print view**; share link. Banner: "Prices are estimates; stores differ."
+- **Budget monitor:** total budget, estimated spend, daily spend, remaining, utilization %, estimated vs. actual (once the user logs actuals), simple sparkline of cumulative spend, trip-by-trip view.
+- **Meal replacement:** from any meal card; shows 3 alternatives with photos and cost deltas; commit with an undo toast.
+- **Saved plans:** grid of plan tiles with cover photos, dates, budget, status; duplicate-and-adjust.
+- **Share:** creates a public read-only snapshot at `/share/:shareId` (no PII), revocable.
+
+# 16. API (Express, versioned, Zod-validated)
+
+All responses JSON. Errors: `{ "error": { "code", "message", "requestId", "details"? } }`. Auth: `Authorization: Bearer <Firebase ID token>`.
+
+- `GET /healthz` (liveness), `GET /readyz` (Firestore and Redis checks)
+- `GET/PATCH/DELETE /v1/me`, `GET /v1/me/export`
+- `POST /v1/plans/estimate`: no AI, fast
+- `POST /v1/plans` (requires `Idempotency-Key`) → `202 {planId}`; `GET /v1/plans/:id`; `PATCH /v1/plans/:id`; `DELETE /v1/plans/:id`
+- `POST /v1/plans/:id/meals/:mealId/swap`, `POST /v1/plans/:id/meals/:mealId/undo-swap`
+- `POST /v1/plans/:id/share`, `DELETE /v1/plans/:id/share`
+- `GET /v1/prices`, `PUT /v1/me/price-overrides/:ingredientId`, `DELETE /v1/me/price-overrides/:ingredientId`
+- `POST /v1/feedback`, `POST /v1/waitlist` (public, App Check + strict rate limit)
+- Admin (`isAdmin`): `PUT /v1/admin/prices/bulk`, `POST /v1/admin/prices/import-csv`, `POST /v1/admin/recipes/:id/approve|reject|regenerate-image`, `GET/PUT /v1/admin/config`
+
+Server hardening: `helmet`, CORS allowlist from `CLIENT_ORIGIN` (comma-separated), `compression`, `trust proxy` = 1 (Render), JSON body limit 100kb, request IDs, structured `pino` logs without PII, graceful shutdown on SIGTERM (drain HTTP, close queues), global error handler, per-IP and per-user rate limits backed by Redis.
+
+# 17. SCALABILITY AND RELIABILITY ("any number of users" means scale by configuration, not rewrites)
+
+- Stateless API and worker, scale each independently by instance count (Render) with no code changes. Redis (Render Key Value) holds queues and limiter state.
+- Firestore auto-scales. Avoid hot documents (no global counters on a single doc; usage docs are per user per month). Cache the recipe library and price books in-process with TTL and version invalidation.
+- Backpressure: a queue-depth cap returns `429` with `Retry-After` and a friendly "We're busy, you're #n in line" state. Jobs are retried with backoff and moved to a dead-letter queue after N attempts.
+- The recipe library amortizes AI cost across all users: the more people use it, the fewer AI calls per plan.
+- Client performance: route-level code splitting, TanStack Query caching, Firestore listeners scoped to the open plan only, image `srcSet` plus lazy loading, long-lived immutable asset caching, Lighthouse targets of 90+ on performance, accessibility, best practices and SEO on the landing page.
+- Document the real limits in `docs/ARCHITECTURE.md`: Gemini quota tier, Firestore limits, Render instance sizes, and how to raise each.
+
+# 18. ENVIRONMENT VARIABLES (document all in README and the `.env.example` files)
+
+Client (`VITE_` prefix, public): `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID` (optional), `VITE_APP_CHECK_SITE_KEY` (optional), `VITE_ENABLE_APP_CHECK`, `VITE_SITE_URL`.
+
+Server (never exposed): `NODE_ENV`, `PORT`, `CLIENT_ORIGIN`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_STORAGE_BUCKET`, `REDIS_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL_TEXT=gemini-3.5-flash-lite`, `GEMINI_MODEL_TEXT_STRONG=gemini-3.8-flash`, `GEMINI_MODEL_IMAGE=gemini-nano-banana-2.1`, `GEMINI_MODEL_IMAGE_FALLBACK=gemini-3.1-flash-lite-image`, `GEMINI_RPM`, `GEMINI_IMAGE_RPM`, `AI_DAILY_SPEND_CAP_USD`, `ENABLE_PRICE_ESTIMATION`, `FREE_PLANS_PER_MONTH`, `SWAPS_PER_DAY`, `APP_CHECK_ENFORCE`, `WORKER_CONCURRENCY`, `LOG_LEVEL`. Validate all with Zod at boot and fail fast with a readable message.
+
+# 19. PREMIUM-SITE CHECKLIST (the standard extras; implement all)
+
+- **Brand:** original logo mark and wordmark; the brand name, tagline and legal entity live in `constants/brand.ts` and `constants/legal.ts` so they can be renamed in one place. `scripts/make-brand-assets.mjs` generates favicon set, Apple touch icon, PWA icons (including maskable) and a 1200×630 Open Graph image from the SVG mark using `sharp`.
+- **SEO:** `<Seo>` component (title, description, canonical, OG, Twitter), static meta in `index.html` for the landing page, `robots.txt`, `sitemap.xml`, JSON-LD (`WebSite`, `Organization`, `FAQPage`), semantic headings, descriptive alt text.
+- **PWA:** `vite-plugin-pwa` with manifest, offline shell, and offline reading of saved plans and the grocery list; install prompt handled gracefully.
+- **Legal and consent:** Privacy Policy, Terms, Cookie Policy (well-structured drafts pulling names from `constants/legal.ts`; README notes a lawyer must review). Cookie/consent banner; analytics (Firebase Analytics or GA4) loads only after consent; no tracking by default.
+- **Accessibility:** skip link, focus management on route change, labelled controls, `aria-live` regions, color-contrast CI check, reduced-motion support.
+- **i18n-ready:** `i18next` with `en` complete and `fil` scaffolded; all UI strings from locale files; dates, numbers and currency via `Intl`.
+- **Theming:** light/dark with no flash; print stylesheet for plans and grocery lists.
+- **States:** skeletons, empty states, error boundary, offline banner, 404, maintenance mode via `config/app`, toast system with undo.
+- **Account:** profile, change password (re-auth), data export (JSON), delete account, connected providers, sign out.
+- **Support:** Contact page and in-app feedback form (`/v1/feedback`), a footer status/contact line.
+- **Onboarding:** short first-run tour using the bento tiles; sample plan available immediately for exploring.
+- **Security:** strict security headers on static and API hosts, CSP shipped as `Content-Security-Policy-Report-Only` with a documented switch to enforce (allow Firebase Auth, Firestore, Storage, Google sign-in and reCAPTCHA endpoints), input validation everywhere, no secrets in the client, dependency audit step in CI.
+- **Admin tools:** price editor with CSV import/export, recipe review queue, `scripts/set-admin.ts` to grant the `admin` claim.
+- **Observability:** structured logs, request IDs, `/healthz` and `/readyz`, optional Sentry via env (off by default).
+- **Dev experience:** ESLint, Prettier, strict TS, Husky optional, GitHub Actions CI, README with quick start, architecture diagram and troubleshooting.
+- **Tests:** Vitest for the engine and shared utilities, Firestore rules tests with `@firebase/rules-unit-testing`, supertest for API auth and validation, a Playwright smoke test (landing renders, login page renders, 404 works).
+
+# 20. BUILD ORDER
+
+1. Root config, `shared` (schemas, money, units, constants).
+2. Firebase config files, rules, indexes, `render.yaml`.
+3. Server: config, middleware, repositories, pricing, plan engine and tests, AI layer, image pipeline, jobs, routes, seed data.
+4. Client foundation: styles/tokens, UI primitives, bento components, providers, router, i18n.
+5. Auth feature and guards, then onboarding.
+6. Landing page and legal pages.
+7. Planner wizard, generation screen, plan overview, day view, recipe drawer with cost breakdown, grocery list, budget monitor, saved plans, prices, settings, admin.
+8. PWA, SEO, brand assets scripts, CI, docs, README.
+9. Final self-review against section 21.
+
+# 21. DEFINITION OF DONE (check every line before finishing)
+
+- Every `.tsx` has a sibling `.module.css`; no CSS-in-TS, no Tailwind, no inline styles other than CSS custom properties.
+- Zero references to AI Studio, `metadata.json`, importmaps or CDN scripts; no Gemini key or SDK in the client bundle.
+- Email/password **and** Google login both work; unverified email users cannot reach `/app` or the API; verification refreshes the token.
+- A generated plan shows, for every meal, a dish image (or the designed placeholder), full recipe steps, and a per-ingredient cost table for the household's quantity; daily totals, shopping total, leftover value and remaining budget add up exactly (integer math, tested).
+- The shopping total never exceeds the budget; infeasible budgets are explained, not faked.
+- Grocery list uses real pack sizes and shows leftovers; trips respect freshness and the no-refrigerator rule.
+- Firestore rules block cross-user access; rules tests pass.
+- `npm run build` succeeds for all workspaces; `render.yaml` and docs let a first-time user deploy without further help.
+- The landing page and app match section 6: Bento Grid, Warm Organic Minimalism, the specified fonts, nothing from the ban list.
+- No fake testimonials, counts, ratings or logos anywhere.
+
+# 22. REFERENCE: `render.yaml` (adapt names; do not remove services)
+
+```yaml
+services:
+  - type: web
+    name: smp-web
+    runtime: static
+    buildCommand: npm ci && npm run build --workspace client
+    staticPublishPath: client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      # …one entry per VITE_ variable, all sync: false
+
+  - type: web
+    name: smp-api
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build --workspace server
+    startCommand: npm run start --workspace server
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: smp-kv, property: connectionString }
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        sync: false
+      # …remaining server variables
+
+  - type: worker
+    name: smp-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build --workspace server
+    startCommand: npm run start:worker --workspace server
+    envVars:
+      # same as smp-api
+
+  - type: keyvalue
+    name: smp-kv
+    plan: starter
+    maxmemoryPolicy: noeviction      # required for BullMQ
+    ipAllowList: []                  # internal connections only
+```
+`README` and `docs/DEPLOY_RENDER.md` must say: use paid instances for the API and worker in production (idle free instances sleep and cause cold starts); add the Render static-site URL and any custom domain to Firebase Auth **Authorized domains**; and set `CLIENT_ORIGIN` on the API to the exact site origin. Validate this file against Render's current Blueprint spec and fix any field names that changed.
+
+# 23. REFERENCE: PHILIPPINES SEED DATA (`server/seed/*.ts`)
+
+Ship a working library so the app is useful on day one, with no AI calls required:
+- `ingredients.ts`: about 70 catalog ingredients with canonical units, aisle category, allergens (shrimp, fish, egg, soy, peanut, milk, wheat), approximate nutrition per 100 g, shelf life.
+- `recipes.ph.ts`: **at least 36 complete, realistic Filipino home recipes**: 10 breakfast (for example garlic fried rice with egg, tortang talong, champorado, pandesal with egg, ginisang corned beef or sardines, arroz caldo), 13 lunch and 13 dinner (for example chicken adobo, pork sinigang, tinolang manok, ginisang munggo, pritong bangus, ginataang kalabasa at sitaw, nilagang baboy, pinakbet, pork giniling, chicken afritada, paksiw na isda, ginisang sayote with shrimp, sardines with pechay). Tag equipment honestly (many need only a stove and rice cooker), variety of proteins and a cheap vegetarian set. Real quantities per 4 servings, 5 to 9 clear steps each.
+- `prices.ph.ts`: starter price book for region `NCR` using the table below.
+
+**Seed prices are rough placeholders, not verified market data.** Mark every seed price `source:'seed'`, show the "Estimate" badge, and have the README tell the owner to review them in the admin price editor before launch. Format: `slug | category | pack size | pack price in PHP`.
+
+```
+rice-well-milled | grains | 1000 g | 55
+chicken-whole | meat | 500 g | 100
+chicken-breast | meat | 500 g | 120
+chicken-thigh | meat | 500 g | 105
+pork-liempo | meat | 500 g | 190
+pork-kasim | meat | 500 g | 165
+pork-ground | meat | 500 g | 150
+beef-kasim | meat | 500 g | 260
+beef-ground | meat | 500 g | 225
+bangus | fish | 500 g | 100
+tilapia | fish | 500 g | 75
+galunggong | fish | 500 g | 110
+squid | seafood | 500 g | 180
+shrimp | seafood | 500 g | 230
+sardines-canned | pantry | 155 g | 24
+egg | dairy-eggs | 1 pc | 10
+evaporated-milk | dairy-eggs | 370 ml | 32
+kangkong | produce | 250 g | 20
+pechay | produce | 250 g | 20
+cabbage | produce | 500 g | 40
+string-beans | produce | 250 g | 25
+eggplant | produce | 250 g | 22
+squash-kalabasa | produce | 500 g | 30
+bitter-gourd | produce | 250 g | 28
+carrot | produce | 250 g | 22
+potato | produce | 500 g | 55
+tomato | produce | 250 g | 20
+onion-red | produce | 250 g | 32
+garlic | produce | 100 g | 22
+ginger | produce | 100 g | 14
+sayote | produce | 500 g | 28
+okra | produce | 250 g | 18
+radish | produce | 250 g | 15
+malunggay | produce | 50 g | 10
+mung-beans | dry-goods | 250 g | 33
+tofu-block | dry-goods | 300 g | 28
+cooking-oil | pantry | 1000 ml | 95
+soy-sauce | pantry | 1000 ml | 55
+vinegar | pantry | 1000 ml | 35
+fish-sauce | pantry | 750 ml | 45
+salt | pantry | 1000 g | 22
+sugar-white | pantry | 1000 g | 88
+black-pepper | pantry | 25 g | 15
+bay-leaf | pantry | 5 g | 8
+tomato-sauce | pantry | 200 g | 20
+sinigang-mix | pantry | 44 g | 19
+pandesal | bakery | 1 pc | 5
+```
+
+Region price adjustments (`NCR`, `CALABARZON`, `CEBU`, etc.) are multipliers in `config`, overridable per ingredient. Document an optional import path for publicly available government price-monitoring data (the owner must verify the data's terms of use first). `scripts/seed.ts` is idempotent (safe to rerun), supports `--images=batch`, and prints a summary.
+
+# 24. FIRST RESPONSE FORMAT
+
+Reply first with: (1) a 10-line plan, (2) the final file tree, (3) any assumptions. Then build in the order of section 20. At the end, give a short "What to configure" list that matches the setup checklist in README.
+
+=== END PROMPT ===
+
+---
+
+## YOUR SETUP CHECKLIST (do this after AI Studio finishes; it cannot do these for you)
+
+1. **Firebase project:** create it, upgrade to the **Blaze (pay-as-you-go)** plan (Cloud Storage needs it for new projects), enable Authentication → Email/Password and Google, create the Firestore database (production mode), enable Storage.
+2. **Authorized domains:** Firebase Console → Authentication → Settings → add your Render static-site URL and any custom domain. Skipping this breaks Google login in production.
+3. **Email action links:** set the action URL to `https://YOUR-SITE/auth/action` and brand the verification/reset email templates (Authentication → Templates).
+4. **Web app config:** add a Web app in Firebase, copy the config into the `VITE_FIREBASE_*` values on Render.
+5. **Service account:** Project settings → Service accounts → generate a key → base64-encode the JSON → paste as `FIREBASE_SERVICE_ACCOUNT_BASE64` on the API and worker.
+6. **Gemini key:** create a key in Google AI Studio on a **billing-enabled** project (paid tier keeps your users' data out of Google's product training) → `GEMINI_API_KEY` on the API and worker only.
+7. **Deploy rules:** `firebase deploy --only firestore:rules,firestore:indexes,storage`.
+8. **Render:** New → Blueprint → select your repo → fill the `sync: false` secrets → deploy. Put the API's URL in `VITE_API_URL`, and the site's URL in `CLIENT_ORIGIN`.
+9. **Seed and admin:** run `npm run seed` once (add `-- --images=batch` to pre-generate dish photos), then `npx tsx scripts/set-admin.ts you@example.com`.
+10. **Before launch:** review the seed prices in `/app/admin`, have the legal pages reviewed by a lawyer, set a realistic `AI_DAILY_SPEND_CAP_USD`, and switch the CSP from report-only to enforced once your browser console is clean.
