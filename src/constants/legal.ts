@@ -1,8 +1,8 @@
 export const LEGAL = {
   effectiveDate: 'November 26, 2026',
-  entityName: "What's you ulam",
+  entityName: "What's your ulam",
   jurisdiction: 'Republic of the Philippines',
-  contactEmail: 'hello@whatsyouulam.app',
+  contactEmail: 'cantal2227@gmail.com',
   allergenNotice:
     'Always check labels. We cannot guarantee allergen-free results for prepared foods or cross-contamination.',
   nutritionNotice:

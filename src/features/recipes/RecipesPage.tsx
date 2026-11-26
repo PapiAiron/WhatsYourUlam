@@ -18,6 +18,8 @@ import { apiClient } from '@/lib/apiClient';
 import { useUiStore } from '@/store/ui';
 import styles from './RecipesPage.module.css';
 
+const DETAILS_MAX_LENGTH = 300;
+
 export function RecipesPage() {
   const pushToast = useUiStore((s) => s.pushToast);
 
@@ -30,6 +32,7 @@ export function RecipesPage() {
   const [genMealType, setGenMealType] = useState<MealType>('dinner');
   const [genDiet, setGenDiet] = useState('none');
   const [genAvoid, setGenAvoid] = useState('');
+  const [genDetails, setGenDetails] = useState('');
   const [genBusy, setGenBusy] = useState(false);
 
   const allRecipes = useMemo(
@@ -61,10 +64,12 @@ export function RecipesPage() {
         mealType: genMealType,
         diet: genDiet,
         excludedText: genAvoid,
+        details: genDetails.trim(),
         existingNames: allRecipes.map((r) => r.name),
       });
       setCustomRecipes((prev) => [recipe, ...prev]);
       setGenOpen(false);
+      setGenDetails('');
       setSelectedRecipe(recipe);
       pushToast({ title: `Added "${recipe.name}"`, tone: 'moss' });
     } catch (err) {
@@ -200,6 +205,21 @@ export function RecipesPage() {
               onChange={(e) => setGenAvoid(e.target.value)}
               placeholder="e.g. shrimp, eggplant"
             />
+          </Field>
+
+          <Field label="What do you want to cook? (optional)" htmlFor="gen-details">
+            <textarea
+              id="gen-details"
+              className={fieldStyles.textarea}
+              rows={3}
+              maxLength={DETAILS_MAX_LENGTH}
+              value={genDetails}
+              onChange={(e) => setGenDetails(e.target.value)}
+              placeholder="e.g. Something with chicken and kangkong, soupy, good for kids, ready in 30 minutes"
+            />
+            <span>
+              {genDetails.length}/{DETAILS_MAX_LENGTH} · Recipes only use everyday ingredients from the palengke or grocery.
+            </span>
           </Field>
 
           <Button type="submit" loading={genBusy} size="lg">

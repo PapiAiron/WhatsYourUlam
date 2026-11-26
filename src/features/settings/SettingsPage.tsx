@@ -215,7 +215,7 @@ export function SettingsPage() {
                 }}
                 options={[
                   { value: 'en', label: 'English' },
-                  { value: 'fil', label: 'Filipino (Beta)' },
+                  // { value: 'fil', label: 'Filipino (Beta)' },
                 ]}
               />
             </Field>

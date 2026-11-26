@@ -542,7 +542,7 @@ export function LandingPage() {
           <div className={styles.container}>
             <div className={styles.sectionHead}>
               <span className={styles.eyebrow}>Made for real kitchens</span>
-              <h2 className={styles.sectionTitle}>Who uses What's you ulam</h2>
+              <h2 className={styles.sectionTitle}>Who uses What's your ulam</h2>
             </div>
             <BentoGrid columns={12}>
               <BentoTile colSpan={3} tone="card">

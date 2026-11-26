@@ -176,14 +176,7 @@ export function AboutPage() {
                 </div>
               </div>
 
-              <div className={styles.highlightGrid}>
-                {DEVELOPER.highlights.map((item) => (
-                  <div key={item.name} className={styles.highlightCard}>
-                    <strong>{item.name}</strong>
-                    <span>{item.summary}</span>
-                  </div>
-                ))}
-              </div>
+             
             </BentoTile>
 
             {/* Direct Contact Tile */}

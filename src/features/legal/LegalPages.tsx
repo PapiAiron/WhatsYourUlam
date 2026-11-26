@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Wordmark } from '@/components/brand/Wordmark';
 import { Seo } from '@/components/seo/Seo';
@@ -10,6 +10,11 @@ import { apiClient } from '@/lib/apiClient';
 import { submitFeedbackDoc } from '@/lib/firestoreRepo';
 import { useUiStore } from '@/store/ui';
 import styles from './LegalPage.module.css';
+
+// Same Formspree form used on the portfolio site.
+// Formspree delivers submissions to the email registered on that form.
+const FORMSPREE_URL = 'https://formspree.io/f/xzdlpdjr';
+const CONTACT_EMAIL = 'cantal2227@gmail.com';
 
 export function PrivacyPage() {
   return (
@@ -95,6 +100,8 @@ export function CookiesPage() {
 
 export function ContactPage() {
   const pushToast = useUiStore((s) => s.pushToast);
+  const formRef = useRef<HTMLFormElement>(null);
+  const mountedAt = useRef(Date.now());
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [topic, setTopic] = useState<'pricing' | 'recipe' | 'bug' | 'feature' | 'general'>('pricing');
@@ -102,12 +109,61 @@ export function ContactPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = formRef.current;
+    if (!form) return;
+
+    // Honeypot: real users never fill this hidden field.
+    // Time-trap: a form submitted faster than a human could type.
+    // Bots get a fake success so they do not retry.
+    const honeypot =
+      (form.elements.namedItem('_gotcha') as HTMLInputElement | null)?.value ?? '';
+    const msSinceLoad = Date.now() - mountedAt.current;
+    if (honeypot || msSinceLoad < 2500) {
+      console.warn('Contact form: treated as bot, nothing was sent.', {
+        honeypotFilled: Boolean(honeypot),
+        msSinceLoad,
+      });
+      setSent(true);
+      return;
+    }
+
     setBusy(true);
     try {
-      await apiClient.submitFeedback({ name, email, topic, message });
-      await submitFeedbackDoc({ name, email, topic, message });
+      const response = await fetch(FORMSPREE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          topic,
+          message,
+          _subject: `[${BRAND.name}] ${topic.toUpperCase()} feedback from ${name || 'visitor'}`,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      console.log('Formspree response:', response.status, result);
+
+      if (!response.ok || result.ok === false) {
+        const reason = Array.isArray(result.errors)
+          ? result.errors.map((x: { message?: string }) => x.message).join(', ')
+          : '';
+        throw new Error(
+          reason || 'The message could not be delivered. Please try again or email me directly.'
+        );
+      }
+
+      // Best-effort extra copies. A failure here never blocks the email that was already sent.
+      void Promise.allSettled([
+        apiClient.submitFeedback({ name, email, topic, message }),
+        submitFeedbackDoc({ name, email, topic, message }),
+      ]);
+
       setSent(true);
       pushToast({ title: 'Message sent — thank you!', tone: 'moss' });
     } catch (err) {
@@ -121,7 +177,7 @@ export function ContactPage() {
     }
   }
 
-  const mailtoHref = `mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(
+  const mailtoHref = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
     `[${BRAND.name}] ${topic.toUpperCase()} feedback from ${name || 'visitor'}`
   )}&body=${encodeURIComponent(
     `Name: ${name}\nEmail: ${email}\nTopic: ${topic}\n\n${message}`
@@ -134,14 +190,14 @@ export function ContactPage() {
         <Wordmark to="/" />
         <h1 className={styles.title}>Contact & Local Price Feedback</h1>
         <p className={styles.meta}>
-          Feedback is sent to {BRAND.supportEmail} · WhatsApp & Viber: {DEVELOPER.phoneLocal}
+          Feedback is sent to {CONTACT_EMAIL} · WhatsApp & Viber: {DEVELOPER.phoneLocal}
         </p>
 
         {sent ? (
           <div className={styles.card}>
             <h2>Message received</h2>
             <p>
-              Thank you for helping keep {BRAND.name} accurate for Filipino households. Your feedback has been saved for {BRAND.supportEmail}.
+              Thank you for helping keep {BRAND.name} accurate for Filipino households. Your message was sent to {CONTACT_EMAIL}.
             </p>
             <div className={styles.actions}>
               <a href={mailtoHref}>
@@ -153,11 +209,34 @@ export function ContactPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className={styles.card}>
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            action={FORMSPREE_URL}
+            method="POST"
+            className={styles.card}
+          >
+            {/* Honeypot: hidden from people, visible to bots */}
+            <div
+              aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}
+            >
+              <label htmlFor="ct-gotcha">Leave this empty</label>
+              <input
+                type="text"
+                id="ct-gotcha"
+                name="_gotcha"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+
             <Field label="Your name" htmlFor="ct-name">
               <input
                 id="ct-name"
+                name="name"
                 required
+                disabled={busy}
                 className={fieldStyles.input}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -166,8 +245,10 @@ export function ContactPage() {
             <Field label="Email" htmlFor="ct-email">
               <input
                 id="ct-email"
+                name="email"
                 type="email"
                 required
+                disabled={busy}
                 className={fieldStyles.input}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -176,6 +257,8 @@ export function ContactPage() {
             <Field label="Topic" htmlFor="ct-topic">
               <select
                 id="ct-topic"
+                name="topic"
+                disabled={busy}
                 className={fieldStyles.select}
                 value={topic}
                 onChange={(e) => setTopic(e.target.value as typeof topic)}
@@ -190,15 +273,17 @@ export function ContactPage() {
             <Field label="Message (at least 10 characters)" htmlFor="ct-msg">
               <textarea
                 id="ct-msg"
+                name="message"
                 required
                 minLength={10}
+                disabled={busy}
                 className={fieldStyles.textarea}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
             </Field>
             <Button type="submit" loading={busy} size="lg">
-              Send feedback to {BRAND.supportEmail}
+              Send feedback to {CONTACT_EMAIL}
             </Button>
           </form>
         )}
@@ -209,8 +294,8 @@ export function ContactPage() {
             Need a quick reply from {DEVELOPER.name}? Reach out directly via email, WhatsApp, or Viber:
           </p>
           <div className={styles.directContacts}>
-            <a href={`mailto:${DEVELOPER.email}`} className={styles.directLink}>
-              Email: {DEVELOPER.email}
+            <a href={`mailto:${CONTACT_EMAIL}`} className={styles.directLink}>
+              Email: {CONTACT_EMAIL}
             </a>
             <a
               href={DEVELOPER.whatsappUrl}

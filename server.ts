@@ -52,6 +52,7 @@ async function createServer() {
             'https://firestore.googleapis.com',
             'https://identitytoolkit.googleapis.com',
             'https://securetoken.googleapis.com',
+            'https://formspree.io',
             ...(isDev ? ['ws://localhost:24678'] : []),
           ],
           frameSrc: ["'self'", 'https://*.firebaseapp.com', 'https://accounts.google.com'],

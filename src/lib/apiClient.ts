@@ -131,6 +131,7 @@ export const apiClient = {
     mealType: MealType;
     diet: string;
     excludedText?: string;
+    details?: string;
     existingNames?: string[];
   }): Promise<{ recipe: Recipe }> {
     return requestJson('/v1/ai/recipes/generate', {

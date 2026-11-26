@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Clock, PencilSimple, Timer } from '@phosphor-icons/react';
 import {
   formatMoney,
@@ -25,6 +25,12 @@ interface RecipeDrawerProps {
   onUpdatePriceOverride?: (ingredientId: string, newPackPriceMinor: number) => Promise<void>;
 }
 
+function formatClock(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function RecipeDrawer({
   open,
   onOpenChange,
@@ -36,21 +42,92 @@ export function RecipeDrawer({
   const [editingIngId, setEditingIngId] = useState<string | null>(null);
   const [editMajor, setEditMajor] = useState<number>(0);
   const [savingPrice, setSavingPrice] = useState(false);
-  const [activeTimerSec, setActiveTimerSec] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (activeTimerSec === null || activeTimerSec <= 0) return;
-    const t = window.setInterval(() => {
-      setActiveTimerSec((s) => (s !== null && s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => window.clearInterval(t);
-  }, [activeTimerSec]);
+  // Cooking timer state.
+  // timerRemainingMs: null = not started, 0 = finished, otherwise time left.
+  // The countdown is based on a fixed end timestamp, so it stays accurate even if
+  // the browser delays or throttles the interval (for example in a background tab).
+  const [timerRemainingMs, setTimerRemainingMs] = useState<number | null>(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const timerEndAtRef = useRef<number>(0);
 
   const recipe = useMemo(() => {
     if (recipeOverride) return recipeOverride;
     if (!meal) return null;
     return SEED_RECIPES_PH.find((r) => r.id === meal.recipeId) ?? null;
   }, [meal, recipeOverride]);
+
+  // Same cook time that is shown in the time badge at the top of the drawer.
+  const cookMinutes = meal?.recipeSnapshot.cookMin ?? recipe?.cookMin ?? 0;
+  const timerMinutes = cookMinutes > 0 ? cookMinutes : 15;
+  const timerTotalMs = timerMinutes * 60 * 1000;
+
+  // Tick: recompute the time left from the end timestamp.
+  useEffect(() => {
+    if (!timerRunning) return;
+    const tick = () => {
+      const left = timerEndAtRef.current - Date.now();
+      if (left <= 0) {
+        setTimerRemainingMs(0);
+        setTimerRunning(false);
+      } else {
+        setTimerRemainingMs(left);
+      }
+    };
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [timerRunning]);
+
+  // The timer never carries over: closing the drawer or opening another recipe resets it.
+  const recipeKey = recipe?.id ?? null;
+  useEffect(() => {
+    setTimerRunning(false);
+    setTimerRemainingMs(null);
+  }, [recipeKey, open]);
+
+  function startTimer() {
+    const ms =
+      timerRemainingMs !== null && timerRemainingMs > 0 ? timerRemainingMs : timerTotalMs;
+    timerEndAtRef.current = Date.now() + ms;
+    setTimerRemainingMs(ms);
+    setTimerRunning(true);
+  }
+
+  function pauseTimer() {
+    setTimerRemainingMs(Math.max(0, timerEndAtRef.current - Date.now()));
+    setTimerRunning(false);
+  }
+
+  function resetTimer() {
+    setTimerRunning(false);
+    setTimerRemainingMs(null);
+  }
+
+  function handleTimerButton() {
+    if (timerRemainingMs === null) {
+      startTimer();
+    } else if (timerRemainingMs <= 0) {
+      resetTimer();
+    } else if (timerRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  }
+
+  const timerSecondsLeft =
+    timerRemainingMs === null ? null : Math.ceil(timerRemainingMs / 1000);
+
+  let timerLabel: string;
+  if (timerSecondsLeft === null) {
+    timerLabel = `Start ${timerMinutes}m timer`;
+  } else if (timerSecondsLeft <= 0) {
+    timerLabel = "Time's up! Reset";
+  } else if (timerRunning) {
+    timerLabel = `${formatClock(timerSecondsLeft)} · Pause`;
+  } else {
+    timerLabel = `${formatClock(timerSecondsLeft)} · Resume`;
+  }
 
   const segments: StackedSegment[] = useMemo(() => {
     if (!meal) return [];
@@ -204,16 +281,16 @@ export function RecipeDrawer({
             <section className={styles.sectionBlock}>
               <div className={styles.stepsHead}>
                 <h3 className={styles.subHeading}>Cooking Steps</h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setActiveTimerSec((recipe.cookMin || 15) * 60)}
-                >
-                  <Timer size={15} />{' '}
-                  {activeTimerSec !== null && activeTimerSec > 0
-                    ? `${Math.floor(activeTimerSec / 60)}:${String(activeTimerSec % 60).padStart(2, '0')}`
-                    : `Start ${recipe.cookMin}m timer`}
-                </Button>
+                <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                  <Button size="sm" variant="outline" onClick={handleTimerButton}>
+                    <Timer size={15} /> {timerLabel}
+                  </Button>
+                  {timerRemainingMs !== null && timerRemainingMs > 0 && (
+                    <Button size="sm" variant="ghost" onClick={resetTimer}>
+                      Reset
+                    </Button>
+                  )}
+                </span>
               </div>
               <ol className={styles.stepsList}>
                 {recipe.steps.map((step, idx) => (

@@ -1,12 +1,12 @@
 export const BRAND = {
-  name: "What's you ulam",
-  shortName: "What's you ulam",
+  name: "What's your ulam",
+  shortName: "What's your ulam",
   tagline: "Tell us your budget. We'll plan your meals.",
   subTagline: 'Everyday home-cooked meals planned around local market prices.',
   adminEmail: 'mcantal22@gmail.com',
   adminEmails: ['mcantal22@gmail.com', 'cantal2227@gmail.com'] as const,
   supportEmail: 'cantal2227@gmail.com',
-  domain: 'https://whatsyouulam.app',
+  domain: 'ComingSoon',
   version: '1.0.0',
 } as const;
 
@@ -15,7 +15,7 @@ export const DEVELOPER = {
   initials: 'MC',
   role: 'Main Developer · Full-Stack & Shopify Developer',
   degree: 'BS Computer Science – Major in Data Science (Laguna University)',
-  bio: 'Builds full-stack systems, Shopify storefronts, and AI-driven workflows — clean on the surface, solid underneath. Combines technical problem-solving, thoughtful UI/UX, and real-world data science to solve everyday problems.',
+  bio: 'Builds full-stack systems, Shopify storefronts, and AI-driven workflows - clean on the surface, solid underneath. Combines technical problem-solving, thoughtful UI/UX, and real-world data science to solve everyday problems.',
   portfolioUrl: 'https://markaironcantal.site/',
   email: 'cantal2227@gmail.com',
   phoneLocal: '09761386092',

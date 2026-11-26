@@ -18,6 +18,7 @@ aiRouter.post('/recipes/generate', requireAuth, async (req, res, next) => {
       mealType: mealTypeSchema.default('dinner'),
       diet: z.string().max(40).default('none'),
       excludedText: z.string().max(120).optional(),
+      details: z.string().max(300).optional(),
       existingNames: z.array(z.string().max(80)).max(60).optional(),
     });
     const body = schema.parse(req.body);
@@ -39,6 +40,7 @@ aiRouter.post('/recipes/generate', requireAuth, async (req, res, next) => {
       mealType: body.mealType,
       diet: body.diet,
       excludedText: body.excludedText,
+      details: body.details,
       existingNames:
         body.existingNames ?? SEED_RECIPES_PH.map((r) => r.name),
     });
